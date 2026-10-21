@@ -1,4 +1,4 @@
-name: Contracts
+name: CI
 
 on:
   push:
@@ -48,21 +48,46 @@ jobs:
   ui:
     name: Design system and Storybook
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/ui
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: packages/ui/package-lock.json
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm run lint
+      - run: npm run typecheck -w @greenhaus/ui
+      - run: npm run lint -w @greenhaus/ui
       - name: Install the browser for the story tests
         run: npx playwright install --with-deps chromium
       - name: Run the stories as tests, including accessibility
-        run: npm test
-      - run: npm run build-storybook
+        run: npm test -w @greenhaus/ui
+      - run: npm run build-storybook -w @greenhaus/ui
+
+  web:
+    name: Web app end to end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w @greenhaus/web
+      - run: npm run lint -w @greenhaus/web
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+      - name: Start the mock backend
+        run: |
+          docker compose up -d --build mock
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8090/health > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          echo "the mock did not become healthy" >&2
+          exit 1
+      - name: Run the end-to-end tests, including accessibility
+        run: npm run e2e -w @greenhaus/web
+      - name: Stop the mock
+        if: always()
+        run: docker compose down
