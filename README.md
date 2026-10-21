@@ -28,6 +28,7 @@ The first stream is the contract layer: HTTP APIs in OpenAPI, events and MQTT to
 contracts/openapi/     HTTP contracts: Greenhaus API, billing API, Pulse device API
 contracts/asyncapi/    integration events (RabbitMQ) and device topics (MQTT)
 mock-server/           .NET mock of the Greenhaus API with contract tests ([details](mock-server/README.md))
+packages/ui/           design system and Storybook on shadcn/ui ([details](packages/ui/README.md))
 data/                  curated data, such as the species catalog
 docs/adr/              architecture decision records
 ```
@@ -51,6 +52,18 @@ npx --yes @redocly/cli lint contracts/openapi/*.yaml
 npx --yes @asyncapi/cli validate contracts/asyncapi/integration-events.yaml
 npx --yes @asyncapi/cli validate contracts/asyncapi/device-mqtt.yaml
 ```
+
+## Design system
+
+A shadcn/ui based component library with a Storybook, in English and Ukrainian, light and dark. Every story runs as a browser test with an accessibility check, and live-data stories read from the mock backend.
+
+| | |
+| --- | --- |
+| ![Zone map](docs/screenshots/ui/pot-zone-map-light-en.png) | ![Actuator control, dark Ukrainian](docs/screenshots/ui/actuator-control-locked-dark-uk.png) |
+
+![Tiers in Ukrainian, dark](docs/screenshots/ui/tier-cards-dark-uk.png)
+
+See [packages/ui](packages/ui/README.md).
 
 ## Run the mock
 

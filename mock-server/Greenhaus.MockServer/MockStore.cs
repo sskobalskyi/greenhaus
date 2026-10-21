@@ -301,7 +301,7 @@ public class MockStore
         AddPlant(herbs, "basil", "Basil", null, 21);
         AddPlant(herbs, "mint", "Mint", null, 35);
         herbs.Requirements = Suggest(herbs).Requirements;
-        AddChannel(herbs, "temperature_z0", Metric.Temperature, herbsZone, "deg C", 22.4);
+        AddChannel(herbs, "temperature_z0", Metric.Temperature, herbsZone, "°C", 22.4);
         AddChannel(herbs, "air_humidity_z0", Metric.AirHumidity, herbsZone, "%", 52);
         AddChannel(herbs, "soil_moisture_z0", Metric.SoilMoisture, herbsZone, "%", 58);
         AddChannel(herbs, "light_z0", Metric.Light, herbsZone, "lux", 24000);
@@ -340,7 +340,7 @@ public class MockStore
         AddPlant(bed, "lettuce", "Lettuce", bed.Zones[2], 18);
         bed.Requirements = Suggest(bed).Requirements;
         bed.Requirements.Metrics.First(m => m.Metric == Metric.Ph).Enabled = true;
-        AddChannel(bed, "temperature_z1", Metric.Temperature, bed.Zones[0], "deg C", 21.0);
+        AddChannel(bed, "temperature_z1", Metric.Temperature, bed.Zones[0], "°C", 21.0);
         var soilBase = new[] { 62.0, 63.0, 41.0, 60.0 };
         var phBase = new[] { 6.4, 7.6, 6.3, 6.5 };
         for (var i = 0; i < 4; i++)

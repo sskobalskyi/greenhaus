@@ -44,3 +44,25 @@ jobs:
         run: dotnet test mock-server/GreenhausMock.slnx --configuration Release
       - name: Build the container image
         run: docker build -f mock-server/Dockerfile -t greenhaus-mock .
+
+  ui:
+    name: Design system and Storybook
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/ui
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: packages/ui/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - name: Install the browser for the story tests
+        run: npx playwright install --with-deps chromium
+      - name: Run the stories as tests, including accessibility
+        run: npm test
+      - run: npm run build-storybook

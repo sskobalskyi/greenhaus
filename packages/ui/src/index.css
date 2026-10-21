@@ -1,0 +1,163 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/nunito";
+@import "@fontsource-variable/fraunces";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Greenhaus design tokens. Playful with taste: warm paper, leaf greens and earthy accents, rounded shapes.
+ * Colours are OKLCH. Light and dark themes share the same names, and the dark one is a night greenhouse.
+ */
+:root {
+  --radius: 1rem;
+
+  --background: oklch(0.985 0.012 95);
+  --foreground: oklch(0.27 0.035 155);
+  --card: oklch(0.995 0.008 95);
+  --card-foreground: oklch(0.27 0.035 155);
+  --popover: oklch(0.995 0.008 95);
+  --popover-foreground: oklch(0.27 0.035 155);
+  --primary: oklch(0.52 0.13 152);
+  --primary-foreground: oklch(0.985 0.012 95);
+  --secondary: oklch(0.94 0.03 120);
+  --secondary-foreground: oklch(0.32 0.05 150);
+  --muted: oklch(0.955 0.02 105);
+  --muted-foreground: oklch(0.5 0.03 150);
+  --accent: oklch(0.9 0.07 75);
+  --accent-foreground: oklch(0.35 0.07 55);
+  --destructive: oklch(0.5 0.2 28);
+  --border: oklch(0.9 0.025 115);
+  --input: oklch(0.9 0.025 115);
+  --ring: oklch(0.62 0.12 152);
+
+  /* Status colours used by pot and zone states */
+  --ok: oklch(0.62 0.15 150);
+  --attention: oklch(0.72 0.16 65);
+  --attention-ink: oklch(0.48 0.12 55);
+  --offline: oklch(0.62 0.02 150);
+  --danger: oklch(0.58 0.2 28);
+
+  /* Tier colours */
+  --tier-novice: oklch(0.7 0.12 135);
+  --tier-gardener: oklch(0.6 0.13 190);
+  --tier-druid: oklch(0.5 0.15 305);
+
+  /* Metric colours, kept apart from the status colours */
+  --metric-temperature: oklch(0.65 0.17 40);
+  --metric-air-humidity: oklch(0.65 0.12 230);
+  --metric-soil-moisture: oklch(0.55 0.1 200);
+  --metric-ph: oklch(0.6 0.15 310);
+  --metric-light: oklch(0.78 0.15 90);
+  --metric-airflow: oklch(0.65 0.06 180);
+
+  --chart-1: var(--metric-temperature);
+  --chart-2: var(--metric-air-humidity);
+  --chart-3: var(--metric-soil-moisture);
+  --chart-4: var(--metric-light);
+  --chart-5: var(--metric-ph);
+}
+
+.dark {
+  --background: oklch(0.2 0.025 165);
+  --foreground: oklch(0.94 0.02 110);
+  --card: oklch(0.245 0.03 165);
+  --card-foreground: oklch(0.94 0.02 110);
+  --popover: oklch(0.245 0.03 165);
+  --popover-foreground: oklch(0.94 0.02 110);
+  --primary: oklch(0.72 0.15 150);
+  --primary-foreground: oklch(0.2 0.03 165);
+  --secondary: oklch(0.3 0.04 160);
+  --secondary-foreground: oklch(0.92 0.03 115);
+  --muted: oklch(0.28 0.03 165);
+  --muted-foreground: oklch(0.72 0.03 130);
+  --accent: oklch(0.4 0.07 70);
+  --accent-foreground: oklch(0.93 0.05 80);
+  --destructive: oklch(0.68 0.19 28);
+  --border: oklch(0.34 0.035 165);
+  --input: oklch(0.34 0.035 165);
+  --ring: oklch(0.65 0.13 150);
+
+  --ok: oklch(0.72 0.16 150);
+  --attention: oklch(0.8 0.15 75);
+  --attention-ink: oklch(0.82 0.13 75);
+  --offline: oklch(0.6 0.02 150);
+  --danger: oklch(0.68 0.19 28);
+
+  --tier-novice: oklch(0.78 0.13 135);
+  --tier-gardener: oklch(0.72 0.12 190);
+  --tier-druid: oklch(0.7 0.14 305);
+
+  --metric-temperature: oklch(0.74 0.15 45);
+  --metric-air-humidity: oklch(0.74 0.11 230);
+  --metric-soil-moisture: oklch(0.7 0.1 200);
+  --metric-ph: oklch(0.72 0.14 310);
+  --metric-light: oklch(0.85 0.14 95);
+  --metric-airflow: oklch(0.74 0.06 180);
+}
+
+@theme inline {
+  --font-sans: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces Variable", Georgia, serif;
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ok: var(--ok);
+  --color-attention: var(--attention);
+  --color-attention-ink: var(--attention-ink);
+  --color-offline: var(--offline);
+  --color-danger: var(--danger);
+
+  --color-tier-novice: var(--tier-novice);
+  --color-tier-gardener: var(--tier-gardener);
+  --color-tier-druid: var(--tier-druid);
+
+  --color-metric-temperature: var(--metric-temperature);
+  --color-metric-air-humidity: var(--metric-air-humidity);
+  --color-metric-soil-moisture: var(--metric-soil-moisture);
+  --color-metric-ph: var(--metric-ph);
+  --color-metric-light: var(--metric-light);
+  --color-metric-airflow: var(--metric-airflow);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}

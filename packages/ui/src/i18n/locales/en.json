@@ -1,0 +1,112 @@
+{
+  "common": {
+    "loading": "Loading",
+    "mockUnavailable": "The mock server is not reachable. Start it with: docker compose up mock",
+    "language": "Language",
+    "theme": "Theme",
+    "light": "Light theme",
+    "dark": "Dark theme"
+  },
+  "status": {
+    "ok": "All good",
+    "attention": "Needs attention",
+    "offline": "Sensor offline",
+    "unknown": "No data yet"
+  },
+  "metric": {
+    "temperature": "Temperature",
+    "air_humidity": "Air humidity",
+    "soil_moisture": "Soil moisture",
+    "ph": "pH",
+    "light": "Light",
+    "airflow": "Airflow"
+  },
+  "band": {
+    "target": "Target {{min}} to {{max}}",
+    "noValue": "No reading",
+    "below": "below target",
+    "above": "above target"
+  },
+  "pot": {
+    "kind": { "pot": "Pot", "balcony": "Balcony", "bed": "Bed" },
+    "view": { "simple": "Simple view", "zones": "Zones view" },
+    "plants_one": "{{count}} plant",
+    "plants_other": "{{count}} plants",
+    "zones_one": "{{count}} zone",
+    "zones_other": "{{count}} zones",
+    "worstZone": "Check {{zone}}",
+    "killSwitch": "Kill switch on",
+    "noReadings": "Waiting for the first readings"
+  },
+  "zoneMap": {
+    "title": "Zone map",
+    "metric": "Metric shown",
+    "noData": "No data",
+    "cell": "{{zone}}: {{metric}} {{value}}, {{state}}",
+    "worst": "Needs attention: {{zone}}"
+  },
+  "mode": {
+    "off": "Off",
+    "notify": "Notify only",
+    "auto": "Auto",
+    "label": "Control mode",
+    "needsTier": "Needs the {{tier}} tier"
+  },
+  "actuator": {
+    "kind": {
+      "pump": "Water pump",
+      "heater": "Heater",
+      "lamp": "Grow lamp",
+      "fan": "Clip-on fan",
+      "humidifier": "Humidifier"
+    },
+    "state": { "idle": "Idle", "running": "Running", "blocked": "Blocked", "fault": "Fault" },
+    "runFor": "Run for {{seconds}} s",
+    "duration": "Run time in seconds",
+    "limits": "Up to {{max}} s per run, at least {{interval}} min apart, {{cap}} s per day",
+    "killSwitch": "The kill switch is on, nothing will run",
+    "lastRun": "Last run {{when}}"
+  },
+  "tier": {
+    "name": { "novice": "Novice", "gardener": "Gardener", "druid": "Druid" },
+    "tagline": {
+      "novice": "Just starting, learning what plants need",
+      "gardener": "Cares for several pots and wants more help",
+      "druid": "Keeps a whole grove in balance"
+    },
+    "free": "Free",
+    "perMonth": "{{price}} per month",
+    "current": "Your plan",
+    "choose": "Choose {{tier}}",
+    "pots_one": "{{count}} pot",
+    "pots_other": "{{count}} pots",
+    "potsUnlimited": "Unlimited pots",
+    "zonesSimple": "Simple view",
+    "zonesGrid": "Zone grid up to {{size}} by {{size}}",
+    "history": "{{days}} days of history",
+    "aiQuestions": "{{count}} assistant questions a month",
+    "ai": {
+      "none": "Assistant gives general care answers",
+      "current": "Assistant sees your current readings",
+      "history": "Assistant sees readings, history and care log"
+    },
+    "automation": "Automatic: {{metrics}}"
+  },
+  "care": {
+    "kind": {
+      "fertilize": "Fertilize",
+      "check_pump": "Check the pump",
+      "ph_check": "Check pH",
+      "custom": "Task"
+    },
+    "origin": {
+      "species_schedule": "From the species schedule",
+      "ph_sensor": "Suggested by the pH sensor",
+      "safety_schedule": "Safety check",
+      "user": "Your task"
+    },
+    "due": "Due {{date}}",
+    "completed": "Done {{date}}",
+    "markDone": "Mark as done"
+  }
+}
