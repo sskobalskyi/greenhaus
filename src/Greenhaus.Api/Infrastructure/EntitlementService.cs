@@ -47,15 +47,17 @@ public sealed class EntitlementService(GreenhausDbContext db, IOptions<Entitleme
         };
     }
 
-    public async Task SetAsync(string userId, Tier tier, string source, string status, DateTimeOffset? validUntil, CancellationToken ct)
+    /// <summary>Stores what billing announced. An event older than the one already stored is ignored, because delivery order is not guaranteed.</summary>
+    public async Task<bool> SetAsync(string userId, Tier tier, string source, string status, DateTimeOffset? validUntil, DateTimeOffset at, CancellationToken ct)
     {
         var row = await db.Entitlements.FirstOrDefaultAsync(e => e.UserId == userId, ct);
+        if (row is not null && row.UpdatedAt > at) return false;
         if (row is null) db.Entitlements.Add(row = new EntitlementEntity { UserId = userId, Source = source, Status = status });
         row.Tier = tier;
         row.Source = source;
         row.Status = status;
         row.ValidUntil = validUntil;
-        row.UpdatedAt = clock.GetUtcNow();
-        await db.SaveChangesAsync(ct);
+        row.UpdatedAt = at;
+        return true;
     }
 }

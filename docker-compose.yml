@@ -24,6 +24,17 @@ services:
     volumes:
       - greenhaus-db:/var/lib/postgresql/data
 
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    profiles: [real]
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      retries: 20
+
   # The real service. `docker compose --profile real up --build api` serves the same contract as the mock on :8091.
   # Auth__Mode=Development trusts the X-User-Id header, which is for this machine only. Use Keycloak otherwise.
   api:
@@ -34,9 +45,14 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     environment:
       ConnectionStrings__Greenhaus: Host=postgres;Database=greenhaus;Username=greenhaus;Password=greenhaus
       Auth__Mode: Development
+      RabbitMq__Host: rabbitmq
+      RabbitMq__User: guest
+      RabbitMq__Password: guest
       # The device platform. Point it at a running Pulse, with a service token (role pulse-service).
       Pulse__BaseUrl: ${PULSE_URL:-http://host.docker.internal:5080/api/pulse/v2}
       Pulse__StaticToken: ${PULSE_TOKEN:-}

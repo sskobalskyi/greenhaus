@@ -18,6 +18,8 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
     public DbSet<AuditEntity> Audit => Set<AuditEntity>();
     public DbSet<CareTaskEntity> Tasks => Set<CareTaskEntity>();
     public DbSet<OutboxMessageEntity> Outbox => Set<OutboxMessageEntity>();
+    public DbSet<InboxMessageEntity> Inbox => Set<InboxMessageEntity>();
+    public DbSet<DeviceOrderEntity> DeviceOrders => Set<DeviceOrderEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -110,6 +112,7 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
             e.ToTable("audit_log");
             e.HasKey(x => x.Id);
             e.HasIndex(x => new { x.PotId, x.At });
+            e.HasIndex(x => x.CommandId);
         });
 
         model.Entity<OutboxMessageEntity>(e =>
@@ -117,8 +120,23 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
             e.ToTable("outbox");
             e.HasKey(x => x.Id);
             e.HasIndex(x => x.PublishedAt);
+            e.Property(x => x.Traceparent).HasMaxLength(64);
             e.Property(x => x.Type).HasMaxLength(64);
             e.Property(x => x.Payload).HasColumnType("jsonb");
+        });
+
+        model.Entity<InboxMessageEntity>(e =>
+        {
+            e.ToTable("inbox");
+            e.HasKey(x => new { x.MessageId, x.Consumer });
+            e.Property(x => x.Consumer).HasMaxLength(64);
+        });
+
+        model.Entity<DeviceOrderEntity>(e =>
+        {
+            e.ToTable("device_orders");
+            e.HasKey(x => x.DeviceId);
+            e.Property(x => x.DeviceId).HasMaxLength(64);
         });
 
         model.Entity<CareTaskEntity>(e =>

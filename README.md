@@ -97,10 +97,10 @@ dotnet test mock-server/GreenhausMock.slnx   # checks every response against the
 ```powershell
 docker compose --profile real up --build api   # http://localhost:8091/api/greenhaus/v1
 dotnet test tests/Greenhaus.Domain.Tests
-dotnet test tests/Greenhaus.Api.Tests          # real PostgreSQL through Testcontainers, every response checked against the contract
+dotnet test tests/Greenhaus.Api.Tests          # real PostgreSQL and RabbitMQ through Testcontainers, every response and event checked against the contracts
 ```
 
-Locally the service runs with `Auth__Mode=Development`, which trusts an `X-User-Id` header. Production-style use validates Keycloak tokens (`Auth__Authority`, `Auth__Audience`). Controllers are linked, read and commanded through Pulse's device API (`Pulse__BaseUrl`, with a client-credentials token or `Pulse__StaticToken` for local runs). Claiming a controller creates its sensors and actuators, tightens defaults inside the controller's hard limits, and syncs alert rules to Pulse whenever requirements change. The outbox relay arrives with the RabbitMQ integration.
+Locally the service runs with `Auth__Mode=Development`, which trusts an `X-User-Id` header. Production-style use validates Keycloak tokens (`Auth__Authority`, `Auth__Audience`). Controllers are linked, read and commanded through Pulse's device API (`Pulse__BaseUrl`, with a client-credentials token or `Pulse__StaticToken` for local runs). Claiming a controller creates its sensors and actuators, tightens defaults inside the controller's hard limits, and syncs alert rules to Pulse whenever requirements change. Events go through RabbitMQ (`RabbitMq__Host`): the outbox is published with confirms, and entitlement, allocation, retirement and command-result events are consumed idempotently. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export traces and metrics.
 
 ## Roadmap
 
@@ -109,7 +109,7 @@ Done: contracts, the mock backend (Greenhaus, billing, Pulse), the design system
 
 Waiting for the real services, which the app will use through the same contracts:
 
-- **Greenhaus API:** pots, plants, zones, requirements, tiers, controls and care run on PostgreSQL with sign-in through Keycloak. Still to come: the RabbitMQ relay and consumer for the outbox, `entitlement.changed.v1` and `device.claimed.v1`.
+- **Greenhaus API:** pots, plants, zones, requirements, tiers, controls and care run on PostgreSQL with sign-in through Keycloak, and exchange events over RabbitMQ. Still to come: a first run against a live Pulse, and Keycloak login in the web app (it runs against the service today with `VITE_MOCK=false` and the development sign-in).
 - **Pulse:** live readings and commands over MQTT (the app polls every ten seconds today), and device allocation from order events.
 - **Docs-Brain:** an assistant panel scoped to a pot, with data access by tier.
 - **Orderflow:** Greenhaus kit products in its catalog (through its `Catalog:SeedFile`), and consuming `device.claimed.v1` to show an order as activated.

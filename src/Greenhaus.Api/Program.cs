@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Greenhaus.Api.Auth;
 using Greenhaus.Api.Features;
 using Greenhaus.Api.Infrastructure;
+using Greenhaus.Api.Messaging;
 using Greenhaus.Api.Persistence;
 using Greenhaus.Domain;
 using Microsoft.AspNetCore.Authentication;
@@ -74,6 +75,15 @@ public partial class Program
             .AddHttpMessageHandler<PulseTokenHandler>();
         builder.Services.AddScoped<IReadingSource, PulseReadingSource>();
         builder.Services.AddScoped<ICommandSender, PulseCommandSender>();
+        builder.Services.Configure<RabbitOptions>(configuration.GetSection("RabbitMq"));
+        if (!string.IsNullOrEmpty(configuration["RabbitMq:Host"]))
+        {
+            builder.Services.AddHostedService<OutboxRelay>();
+            builder.Services.AddHostedService<EventConsumer>();
+        }
+        // The browser app calls the API directly in local development. Tokens travel in a header, not cookies, so no credentials are allowed.
+        var origins = configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173", "http://localhost:4173"];
+        builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
         builder.Services.AddProblemDetails();
         builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
@@ -82,8 +92,8 @@ public partial class Program
         {
             builder.Services.AddOpenTelemetry()
                 .ConfigureResource(r => r.AddService("greenhaus-api"))
-                .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddOtlpExporter())
-                .WithMetrics(m => m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddOtlpExporter());
+                .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource("Npgsql", GreenhausTelemetry.Name).AddOtlpExporter())
+                .WithMetrics(m => m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddMeter(GreenhausTelemetry.Name).AddOtlpExporter());
         }
 
         var app = builder.Build();
@@ -97,6 +107,7 @@ public partial class Program
         if (string.Equals(auth.Mode, "Development", StringComparison.OrdinalIgnoreCase))
             app.Logger.LogWarning("Auth:Mode is Development. Callers are trusted by the X-User-Id header. Never use this outside a local machine.");
 
+        app.UseCors();
         app.UseAuthentication();
         app.UseRateLimiter();
         app.UseAuthorization();

@@ -150,7 +150,7 @@ public sealed class OpenApiContract
         return node;
     }
 
-    private static JsonNode? ToJson(YamlNode node) => node switch
+    internal static JsonNode? ToJson(YamlNode node) => node switch
     {
         YamlMappingNode map => new JsonObject(map.Children.Select(c => KeyValuePair.Create(((YamlScalarNode)c.Key).Value!, ToJson(c.Value)))),
         YamlSequenceNode seq => new JsonArray(seq.Children.Select(ToJson).ToArray()),

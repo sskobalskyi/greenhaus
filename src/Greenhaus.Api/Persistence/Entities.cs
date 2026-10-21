@@ -132,6 +132,8 @@ public class AuditEntity
     public required string Action { get; set; }
     public required string Reason { get; set; }
     public string? Outcome { get; set; }
+    /// <summary>The Pulse command behind a manual run, so its result can be written back.</summary>
+    public Guid? CommandId { get; set; }
 }
 
 public class CareTaskEntity
@@ -155,4 +157,24 @@ public class OutboxMessageEntity
     public required string Payload { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? PublishedAt { get; set; }
+    public int Attempts { get; set; }
+    /// <summary>W3C trace context of the request that caused the event, so a trace continues in the consumers.</summary>
+    public string? Traceparent { get; set; }
+}
+
+/// <summary>A message already handled by a consumer. The pair is unique, so a redelivery is recognised and skipped.</summary>
+public class InboxMessageEntity
+{
+    public Guid MessageId { get; set; }
+    public required string Consumer { get; set; }
+    public DateTimeOffset ProcessedAt { get; set; }
+}
+
+/// <summary>Which order a device was allocated to, from device.allocated.v1, so the claim can name the order.</summary>
+public class DeviceOrderEntity
+{
+    public required string DeviceId { get; set; }
+    public Guid OrderId { get; set; }
+    public required string CustomerId { get; set; }
+    public DateTimeOffset AllocatedAt { get; set; }
 }
