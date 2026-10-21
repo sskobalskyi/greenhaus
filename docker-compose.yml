@@ -56,6 +56,10 @@ services:
       # The device platform. Point it at a running Pulse, with a service token (role pulse-service).
       Pulse__BaseUrl: ${PULSE_URL:-http://host.docker.internal:5080/api/pulse/v2}
       Pulse__StaticToken: ${PULSE_TOKEN:-}
+      # Or a client-credentials token, for example from Pulse's Keycloak (see the README).
+      Pulse__TokenUrl: ${PULSE_TOKEN_URL:-}
+      Pulse__ClientId: ${PULSE_CLIENT_ID:-}
+      Pulse__ClientSecret: ${PULSE_CLIENT_SECRET:-}
     ports:
       - "8091:8080"
     restart: unless-stopped
