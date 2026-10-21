@@ -8,7 +8,6 @@ export const zone = (n: number, row: number, col: number): Schemas['Zone'] => ({
   id: `00000000-0000-4000-8000-00000000000${n}`,
   row,
   col,
-  label: `Zone ${n}`,
 })
 
 export const bedZones: Schemas['Zone'][] = [zone(1, 0, 0), zone(2, 0, 1), zone(3, 1, 0), zone(4, 1, 1)]

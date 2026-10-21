@@ -88,4 +88,8 @@ export const FromMock: StoryObj<{ pot: Schemas['Pot'] }> = {
 export const UkrainianDark: Story = {
   globals: { locale: 'uk', theme: 'dark' },
   args: { pot: bedPot, status: bedStatus, zones: bedZones, plantCount: 5 },
+  play: async ({ canvasElement }) => {
+    // The API sends no zone label, so the default name is built in the language of the interface.
+    await expect(within(canvasElement).getByText(/Зона 3/)).toBeVisible()
+  },
 }

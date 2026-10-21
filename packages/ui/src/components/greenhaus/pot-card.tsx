@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import type { Schemas } from '@/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { zoneName } from '@/lib/zone'
 import { cn } from '@/lib/utils'
 import { RequirementBand } from './requirement-band'
 import { StatusChip } from './status-chip'
@@ -41,7 +42,7 @@ export function PotCard({ pot, status, requirements, zones, plantCount, classNam
           <StatusChip state={status.state} />
         </div>
         {pot.viewMode === 'zones' && shown && status.state === 'attention' && shownZone && (
-          <p className="text-sm font-semibold text-attention-ink">{t('pot.worstZone', { zone: shownZone.label })}</p>
+          <p className="text-sm font-semibold text-attention-ink">{t('pot.worstZone', { zone: zoneName(t, shownZone, { simple: false, cols: pot.gridCols ?? 1 }) })}</p>
         )}
       </CardHeader>
 

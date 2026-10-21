@@ -1,4 +1,4 @@
-﻿# Greenhaus design system
+# Greenhaus design system
 
 shadcn/ui components, Greenhaus components built on them, and a Storybook to develop, document and test everything. Free and open-source tools only, and nothing is published: Storybook runs locally.
 
@@ -50,10 +50,10 @@ Base components in `src/components/ui/` come from shadcn and are owned by this r
 - **State is not colour alone.** Every status has an icon and a word, and each metric has its own icon.
 - **Data comes from the contract.** Types are generated from the OpenAPI document. Stories named "From mock" load real data from the mock backend, so component shapes cannot drift from the API. The typed builders in `src/stories/args.ts` only describe component states (a dry zone, a locked tier), they are not API mocks.
 - **Accessibility is a test.** The a11y addon runs in `error` mode, so a contrast or labelling violation fails `npm test`. Every component also has a dark Ukrainian story, so contrast and longer words are checked in both themes. The first run found real problems (slider without a name, low contrast for attention text and tier badges, a meter without a value), all fixed.
+- **Zone names are built in the client.** The API returns a label only when the user chose one, so the default ("Zone 3", "Whole pot") is localized by the interface (src/lib/zone.ts).
 - **Translations are data.** Strings live in `src/i18n/locales/en.json` and `uk.json`, with Ukrainian plural forms.
 
 ## Known gaps
 
-- Default zone labels ("Zone 3") come from the API in English. They should be localized on the client, so the contract should allow a missing label. To be raised as a small contract PR.
 - Currency is passed in as data. A billing contract field for the display currency is not defined yet.
 - No visual regression run in CI yet. Screenshots are generated, not compared.

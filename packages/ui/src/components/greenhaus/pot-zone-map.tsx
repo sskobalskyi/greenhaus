@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import type { Metric, ReadingState, Schemas } from '@/api/client'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { defaultUnit, formatValue, metricIcon, metrics } from '@/lib/metrics'
+import { zoneName } from '@/lib/zone'
 import { cn } from '@/lib/utils'
 
 export interface PotZoneMapProps {
@@ -30,6 +31,7 @@ export function PotZoneMap({ rows, cols, zones, status, requirements, initialMet
   const available = metrics.filter((m) => status.zones.some((z) => z.metrics.some((r) => r.metric === m)))
   const [metric, setMetric] = useState<Metric>(initialMetric ?? available[0] ?? 'soil_moisture')
   const worst = zones.find((z) => z.id === status.worstZoneId)
+  const nameOf = (zone: Schemas['Zone']) => zoneName(t, zone, { simple: false, cols })
 
   return (
     <section className={cn('space-y-3', className)} aria-label={t('zoneMap.title')}>
@@ -67,14 +69,14 @@ export function PotZoneMap({ rows, cols, zones, status, requirements, initialMet
           return (
             <li
               key={zone.id}
-              aria-label={t('zoneMap.cell', { zone: zone.label, metric: t(`metric.${metric}`), value: valueText, state: t(`status.${state}`) })}
+              aria-label={t('zoneMap.cell', { zone: nameOf(zone), metric: t(`metric.${metric}`), value: valueText, state: t(`status.${state}`) })}
               className={cn(
                 'flex min-h-20 flex-col justify-between rounded-xl border-2 p-2.5 text-sm',
                 cellLook[state],
                 zone.id === status.worstZoneId && 'ring-2 ring-attention ring-offset-2 ring-offset-background',
               )}
             >
-              <span className="font-semibold">{zone.label}</span>
+              <span className="font-semibold">{nameOf(zone)}</span>
               <span className="flex items-center gap-1 text-base font-bold tabular-nums">
                 {valueText}
                 {reading?.direction === 'above' && <ArrowUp className="size-4 text-attention-ink" aria-hidden />}
@@ -88,7 +90,7 @@ export function PotZoneMap({ rows, cols, zones, status, requirements, initialMet
         })}
       </ul>
 
-      {worst && <p className="text-sm font-semibold text-attention-ink">{t('zoneMap.worst', { zone: worst.label })}</p>}
+      {worst && <p className="text-sm font-semibold text-attention-ink">{t('zoneMap.worst', { zone: nameOf(worst) })}</p>}
     </section>
   )
 }
