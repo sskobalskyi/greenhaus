@@ -17,7 +17,7 @@ A small "Mock" selector in the header lets you act as the Novice, Gardener or Dr
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `VITE_API_BASE` | `http://localhost:8090/api/greenhaus/v1` | The Greenhaus API |
-| `VITE_BILLING_BASE` | `http://localhost:8090/api/billing/v1` | The billing API, only used for prices |
+| `VITE_BILLING_BASE` | `http://localhost:8090/api/billing/v1` | The billing API: prices, subscribing and cancelling |
 | `VITE_SHOP_URL` | `http://localhost:5173` | The marketplace (Orderflow), for "Open the shop" |
 
 ## Pages
@@ -27,7 +27,7 @@ A small "Mock" selector in the header lets you act as the Novice, Gardener or Dr
 | My pots | Every pot as a card. A pot in the zones view names its worst zone. Adding a pot past the plan limit opens an upsell with the tier that unlocks it |
 | A pot | Tabs for the overview (live readings, or the zone map), plants (with a conflict warning when plants disagree), requirements, controls, care tasks and linked controllers |
 | Controls | Mode per actuator, manual run, safety limits, a kill switch and the audit log of what the automation did. Refusals such as a missing thermal cutoff or calibration are explained |
-| Plans | The three tiers with their limits from the API, the current one marked, and a banner when a purchase grant is at risk |
+| Plans | The three tiers with their limits and prices, the current one marked. Choosing a plan subscribes through the billing mock (a demo switch simulates a declined card), the subscription can be cancelled, and a banner explains a purchase grant that is at risk |
 | Claim | The page the QR code opens: shows the device, asks for a pot and links it. Unshipped, expired, wrong and already-claimed codes get a clear explanation |
 | Set-up guide | The ready kit, a build-it-yourself parts list, the QR steps and the safety advice about overflow, siphoning and heaters |
 
@@ -40,7 +40,7 @@ docker compose up -d mock
 npm run e2e -w @greenhaus/web
 ```
 
-26 Playwright tests drive the real app against the mock: the overview, the zones view and metric switch, plan limits and the upsell, the heater guard and the kill switch, plants and care, plans, the whole QR claim flow, the language switch, and an **axe accessibility scan of every page in light English and dark Ukrainian**. The mock is reset before each test.
+30 Playwright tests drive the real app against the mock: the overview, the zones view and metric switch, plan limits and the upsell, the heater guard and the kill switch, plants and care, plans, the whole QR claim flow, the language switch, and an **axe accessibility scan of every page in light English and dark Ukrainian**. The mock is reset before each test.
 
 Screenshots for the READMEs are produced by `SCREENSHOTS=1 npx playwright test screenshots`.
 
@@ -48,5 +48,4 @@ Screenshots for the READMEs are produced by `SCREENSHOTS=1 npx playwright test s
 
 - No real sign-in yet. The mock does not check tokens, and Keycloak arrives with the real Greenhaus API.
 - Requirements are shown but cannot be edited yet. The editor component is not built.
-- Choosing a plan does not check out. It needs the billing mock, which is not built yet, so prices are blank and paid tiers say the price is shown at checkout.
 - Live updates poll every ten seconds. SignalR from Pulse comes with the real device platform.

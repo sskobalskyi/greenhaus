@@ -1,6 +1,6 @@
 import type { ControlMode, Schemas } from '@greenhaus/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, billingBase, mockTier } from './http'
+import { ApiError, api, billingBase, mockTier } from './http'
 
 type S = Schemas
 
@@ -33,6 +33,23 @@ export function useClaimPreview(deviceId: string | null, token: string | null) {
     retry: false,
   })
 }
+
+type Subscription = { id: string; tier: S['Tier']; status: 'active' | 'past_due' | 'cancelled'; currentPeriodEnd: string; cancelAtPeriodEnd?: boolean }
+
+/** The paid subscription, or null when there is none. Billing answers 404 for no subscription. */
+export const useSubscription = () =>
+  useQuery({
+    queryKey: ['billing', 'subscription'],
+    queryFn: async () => {
+      try {
+        return await api<Subscription>('/subscription', { base: billingBase })
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) return null
+        throw error
+      }
+    },
+    retry: false,
+  })
 
 /** Prices come from the billing service. If it is not running the plans page simply shows no prices. */
 export const usePrices = () =>
@@ -118,5 +135,27 @@ export function useClaim() {
   return useMutation({
     mutationFn: (body: { deviceId: string; token: string; potId: string }) => api<S['Claim']>('/claims', { method: 'POST', json: body }),
     onSuccess: (_claim, vars) => Promise.all([invalidate('devices', vars.potId), invalidate('pots'), invalidate('status', vars.potId)]),
+  })
+}
+
+function useBillingRefresh() {
+  const client = useQueryClient()
+  return () => Promise.all([client.invalidateQueries({ queryKey: ['billing'] }), client.invalidateQueries({ queryKey: key('entitlements') })])
+}
+
+export function useSubscribe() {
+  const refresh = useBillingRefresh()
+  return useMutation({
+    mutationFn: (v: { tier: S['Tier']; paymentMethodToken: string }) =>
+      api<Subscription>('/subscription', { method: 'POST', json: v, base: billingBase }),
+    onSuccess: refresh,
+  })
+}
+
+export function useCancelSubscription() {
+  const refresh = useBillingRefresh()
+  return useMutation({
+    mutationFn: () => api<Subscription>('/subscription/cancel', { method: 'POST', base: billingBase }),
+    onSuccess: refresh,
   })
 }

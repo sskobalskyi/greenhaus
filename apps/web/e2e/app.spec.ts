@@ -127,8 +127,10 @@ test.describe('plans and claiming', () => {
     await page.goto('/plans')
     for (const name of ['Novice', 'Gardener', 'Druid']) await expect(page.getByText(name, { exact: true }).first()).toBeVisible()
     await expect(page.getByRole('button', { name: 'Your plan' })).toBeDisabled()
-    // The billing service is not part of this run, so paid tiers show no price but are never labelled Free.
+    // Prices come from the billing mock, and only the free tier says Free.
     await expect(page.getByText('Free', { exact: true })).toHaveCount(1)
+    await expect(page.getByText(/\$3\.00 per month/)).toBeVisible()
+    await expect(page.getByText(/\$7\.00 per month/)).toBeVisible()
   })
 
   test('a purchase grant at risk is explained', async ({ page }) => {
@@ -162,6 +164,35 @@ test.describe('plans and claiming', () => {
   })
 })
 
+test.describe('checkout', () => {
+  test('choosing Druid subscribes and the plan changes everywhere', async ({ page }) => {
+    await page.goto('/plans')
+    await page.getByRole('button', { name: 'Choose Druid' }).click()
+    await expect(page.getByRole('status')).toContainText('You are now on Druid')
+    await expect(page.getByRole('button', { name: 'Your plan' })).toBeVisible()
+    await expect(page.locator('header').getByText('Druid', { exact: true }).first()).toBeVisible()
+  })
+
+  test('a declined card leaves the plan unchanged', async ({ page }) => {
+    await page.goto('/plans')
+    await page.getByLabel('Simulate a declined card (demo)').check()
+    await page.getByRole('button', { name: 'Choose Druid' }).click()
+    await expect(page.getByRole('status')).toContainText('The card was declined')
+    await expect(page.getByRole('button', { name: 'Choose Druid' })).toBeVisible()
+  })
+
+  test('choosing the free tier ends the paid plan at the end of the period', async ({ page }) => {
+    await page.goto('/plans')
+    await page.getByRole('button', { name: 'Choose Novice' }).click()
+    await expect(page.getByText(/Your Gardener plan ends on/)).toBeVisible()
+  })
+  test('cancelling keeps the plan until the period ends and says when', async ({ page }) => {
+    await page.goto('/plans')
+    await page.getByRole('button', { name: 'Cancel subscription' }).click()
+    await expect(page.getByText(/Your Gardener plan ends on/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Cancel subscription' })).toHaveCount(0)
+  })
+})
 test.describe('language', () => {
   test('switches to Ukrainian, including the default zone names', async ({ page }) => {
     await page.goto('/')

@@ -55,3 +55,13 @@ export const PriceUnknown: Story = {
     await expect(canvas.queryByText('Free')).toBeNull()
   },
 }
+
+/** Billing lists the free tier with a price of zero. It still reads "Free", never "$0.00 per month". */
+export const FreeWithZeroPrice: Story = {
+  args: { price: { amount: 0, currency: 'USD' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Free')).toBeVisible()
+    await expect(canvas.queryByText(/per month/)).toBeNull()
+  },
+}

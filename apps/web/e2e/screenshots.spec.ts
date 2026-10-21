@@ -11,11 +11,13 @@ const looks = [
   { name: 'dark-uk', locale: 'uk', dark: true },
 ]
 
-async function open(page: Page, url: string, look: (typeof looks)[number], tier = 'gardener') {
+// A null tier lets billing decide, which is what a real user sees.
+async function open(page: Page, url: string, look: (typeof looks)[number], tier: string | null = 'gardener') {
   await page.addInitScript(
     ([locale, mockTier]) => {
       localStorage.setItem('locale', locale)
-      localStorage.setItem('mockTier', mockTier)
+      if (mockTier) localStorage.setItem('mockTier', mockTier)
+      else localStorage.removeItem('mockTier')
     },
     [look.locale, tier],
   )
@@ -60,7 +62,7 @@ for (const look of looks) {
 
   test(`plans ${look.name}`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
-    await open(page, '/plans', look, 'novice')
+    await open(page, '/plans', look, null)
     await page.screenshot({ path: path.join(out, `plans-${look.name}.png`), fullPage: true })
   })
 
