@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using Greenhaus.Api.Auth;
 using Greenhaus.Api.Contracts;
 using Greenhaus.Api.Infrastructure;
+using Greenhaus.Api.Messaging;
 using Greenhaus.Api.Persistence;
 using Greenhaus.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -87,11 +88,10 @@ public static class ClaimEndpoints
             });
         }
 
-        db.Outbox.Add(new OutboxMessageEntity
-        {
-            Id = Guid.NewGuid(), Type = "device.claimed.v1", CreatedAt = now,
-            Payload = System.Text.Json.JsonSerializer.Serialize(new { deviceId = device.Id, ownerId = user, potId = pot.Id, claimedAt = now }, EventPublisher.Json),
-        });
+        // The order is known when Orderflow allocated this device. A do-it-yourself build has none, and the event says so by omitting it.
+        var orderId = await db.DeviceOrders.AsNoTracking().Where(o => o.DeviceId == device.Id).Select(o => (Guid?)o.OrderId).FirstOrDefaultAsync(ct);
+        events.Stage("device.claimed.v1", new { deviceId = device.Id, ownerId = user, potId = pot.Id, orderId, claimedAt = now });
+        GreenhausTelemetry.DevicesClaimed.Add(1);
         db.AddAudit(pot.Id, "user", "device_claimed", $"Controller {device.Id} linked", null, null, clock);
         await db.SaveChangesAsync(ct);
         await sync.SyncRulesAsync(pot.Id, ct);

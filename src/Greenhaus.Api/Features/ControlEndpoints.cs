@@ -93,7 +93,7 @@ public static class ControlEndpoints
             try { commandId = await commands.RunAsync(actuator.DeviceId, actuator.Id, seconds, ct); }
             catch (PulseException e) { return PulseProblems.From(e); }
             actuator.LastRunAt = clock.GetUtcNow();
-            db.AddAudit(potId, "user", "run", $"{seconds} s requested by the user", actuator.Id, null, clock);
+            db.AddAudit(potId, "user", "run", $"{seconds} s requested by the user", actuator.Id, null, clock, commandId);
             await db.SaveChangesAsync(ct);
             return Results.Json(new CommandReceiptDto { CommandId = commandId, Status = "sent" }, statusCode: 202);
         });

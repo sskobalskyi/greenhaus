@@ -94,6 +94,9 @@ namespace Greenhaus.Api.Persistence.Migrations
                     b.Property<DateTimeOffset>("At")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CommandId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Outcome")
                         .HasColumnType("text");
 
@@ -105,6 +108,8 @@ namespace Greenhaus.Api.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CommandId");
 
                     b.HasIndex("PotId", "At");
 
@@ -193,6 +198,27 @@ namespace Greenhaus.Api.Persistence.Migrations
                     b.ToTable("channels", "greenhaus");
                 });
 
+            modelBuilder.Entity("Greenhaus.Api.Persistence.DeviceOrderEntity", b =>
+                {
+                    b.Property<string>("DeviceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("AllocatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("DeviceId");
+
+                    b.ToTable("device_orders", "greenhaus");
+                });
+
             modelBuilder.Entity("Greenhaus.Api.Persistence.EntitlementEntity", b =>
                 {
                     b.Property<string>("UserId")
@@ -223,6 +249,23 @@ namespace Greenhaus.Api.Persistence.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("entitlements", "greenhaus");
+                });
+
+            modelBuilder.Entity("Greenhaus.Api.Persistence.InboxMessageEntity", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Consumer")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MessageId", "Consumer");
+
+                    b.ToTable("inbox", "greenhaus");
                 });
 
             modelBuilder.Entity("Greenhaus.Api.Persistence.LinkedDeviceEntity", b =>
@@ -266,6 +309,9 @@ namespace Greenhaus.Api.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -275,6 +321,10 @@ namespace Greenhaus.Api.Persistence.Migrations
 
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Traceparent")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<string>("Type")
                         .IsRequired()

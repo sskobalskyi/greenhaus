@@ -44,10 +44,10 @@ public static class Mapping
     public static Task<PotEntity?> OwnedPotAsync(this GreenhausDbContext db, Guid id, string owner, CancellationToken ct) =>
         db.Pots.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == owner, ct);
 
-    public static void AddAudit(this GreenhausDbContext db, Guid potId, string actor, string action, string reason, string? actuatorId, string? outcome, TimeProvider clock) =>
+    public static void AddAudit(this GreenhausDbContext db, Guid potId, string actor, string action, string reason, string? actuatorId, string? outcome, TimeProvider clock, Guid? commandId = null) =>
         db.Audit.Add(new AuditEntity
         {
-            Id = Guid.NewGuid(), PotId = potId, At = clock.GetUtcNow(), Actor = actor, ActuatorId = actuatorId, Action = action, Reason = reason, Outcome = outcome,
+            Id = Guid.NewGuid(), PotId = potId, At = clock.GetUtcNow(), Actor = actor, ActuatorId = actuatorId, Action = action, Reason = reason, Outcome = outcome, CommandId = commandId,
         });
     public static ZoneEntity NewZone(Guid potId, int row, int col) => new() { Id = Guid.NewGuid(), PotId = potId, Row = row, Col = col };
 
