@@ -1,0 +1,118 @@
+{
+  "common": {
+    "loading": "Завантаження",
+    "mockUnavailable": "Мок-сервер недоступний. Запустіть його командою: docker compose up mock",
+    "language": "Мова",
+    "theme": "Тема",
+    "light": "Світла тема",
+    "dark": "Темна тема"
+  },
+  "status": {
+    "ok": "Усе гаразд",
+    "attention": "Потрібна увага",
+    "offline": "Датчик не на зв'язку",
+    "unknown": "Даних ще немає"
+  },
+  "metric": {
+    "temperature": "Температура",
+    "air_humidity": "Вологість повітря",
+    "soil_moisture": "Вологість ґрунту",
+    "ph": "pH",
+    "light": "Світло",
+    "airflow": "Обдув"
+  },
+  "band": {
+    "target": "Ціль від {{min}} до {{max}}",
+    "noValue": "Немає показника",
+    "below": "нижче цілі",
+    "above": "вище цілі"
+  },
+  "pot": {
+    "kind": { "pot": "Горщик", "balcony": "Балкон", "bed": "Грядка" },
+    "view": { "simple": "Простий вигляд", "zones": "Вигляд із зонами" },
+    "plants_one": "{{count}} рослина",
+    "plants_few": "{{count}} рослини",
+    "plants_many": "{{count}} рослин",
+    "plants_other": "{{count}} рослини",
+    "zones_one": "{{count}} зона",
+    "zones_few": "{{count}} зони",
+    "zones_many": "{{count}} зон",
+    "zones_other": "{{count}} зони",
+    "worstZone": "Перевірте: {{zone}}",
+    "killSwitch": "Аварійний вимикач увімкнено",
+    "noReadings": "Чекаємо на перші показники"
+  },
+  "zoneMap": {
+    "title": "Карта зон",
+    "metric": "Показник",
+    "noData": "Немає даних",
+    "cell": "{{zone}}: {{metric}} {{value}}, {{state}}",
+    "worst": "Потрібна увага: {{zone}}"
+  },
+  "mode": {
+    "off": "Вимкнено",
+    "notify": "Лише сповіщення",
+    "auto": "Авто",
+    "label": "Режим керування",
+    "needsTier": "Потрібен тир «{{tier}}»"
+  },
+  "actuator": {
+    "kind": {
+      "pump": "Насос для поливу",
+      "heater": "Обігрівач",
+      "lamp": "Лампа для рослин",
+      "fan": "Вентилятор на прищіпці",
+      "humidifier": "Зволожувач"
+    },
+    "state": { "idle": "Очікує", "running": "Працює", "blocked": "Заблоковано", "fault": "Несправність" },
+    "runFor": "Запустити на {{seconds}} с",
+    "duration": "Час роботи в секундах",
+    "limits": "До {{max}} с за запуск, не частіше ніж раз на {{interval}} хв, {{cap}} с на добу",
+    "killSwitch": "Аварійний вимикач увімкнено, нічого не запуститься",
+    "lastRun": "Останній запуск {{when}}"
+  },
+  "tier": {
+    "name": { "novice": "Новак", "gardener": "Садівник", "druid": "Друїд" },
+    "tagline": {
+      "novice": "Тільки починає, вчиться, чого потребують рослини",
+      "gardener": "Доглядає кілька горщиків і хоче більше допомоги",
+      "druid": "Тримає цілий гай у рівновазі"
+    },
+    "free": "Безкоштовно",
+    "perMonth": "{{price}} на місяць",
+    "current": "Ваш план",
+    "choose": "Обрати «{{tier}}»",
+    "pots_one": "{{count}} горщик",
+    "pots_few": "{{count}} горщики",
+    "pots_many": "{{count}} горщиків",
+    "pots_other": "{{count}} горщика",
+    "potsUnlimited": "Горщиків без обмежень",
+    "zonesSimple": "Простий вигляд",
+    "zonesGrid": "Сітка зон до {{size}} на {{size}}",
+    "history": "Історія за {{days}} днів",
+    "aiQuestions": "{{count}} запитань до помічника на місяць",
+    "ai": {
+      "none": "Помічник дає загальні поради з догляду",
+      "current": "Помічник бачить поточні показники",
+      "history": "Помічник бачить показники, історію та журнал догляду"
+    },
+    "automation": "Автоматично: {{metrics}}"
+  },
+  "care": {
+    "kind": {
+      "fertilize": "Підгодувати",
+      "check_pump": "Перевірити насос",
+      "ph_check": "Перевірити pH",
+      "custom": "Завдання"
+    },
+    "origin": {
+      "species_schedule": "За розкладом виду",
+      "ph_sensor": "Підказка від pH-датчика",
+      "safety_schedule": "Перевірка безпеки",
+      "user": "Ваше завдання"
+    },
+    "due": "Термін: {{date}}",
+    "completed": "Виконано {{date}}",
+    "markDone": "Позначити виконаним"
+  }
+}
