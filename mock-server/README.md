@@ -1,14 +1,33 @@
 # Greenhaus mock server
 
-A .NET mock of the Greenhaus API that implements `contracts/openapi/greenhaus-api.yaml`, so the web UI, Storybook and other services can be built before the real services exist. Mocks live in the backend on purpose: clients talk to a real HTTP server that follows the contract, instead of carrying hand-written JSON.
+A .NET mock that implements three contracts on one host, so the web UI, Storybook and the services can be built before the real services exist:
 
-It is not a stub that returns fixed files. It applies the same rules the real service will:
+| API | Contract | Base path |
+| --- | --- | --- |
+| Greenhaus | `contracts/openapi/greenhaus-api.yaml` | `/api/greenhaus/v1` |
+| Billing | `contracts/openapi/billing-api.yaml` | `/api/billing/v1` |
+| Pulse device API | `contracts/openapi/pulse-device-api.yaml` | `/api/pulse/v2` |
 
-- **Tier limits:** pots per tier, the zone grid size, and how automated each metric may be.
-- **Guards:** a heater cannot run in `auto` without a declared thermal cutoff, a sensor must be calibrated before `auto`, safety limits can only be tightened within the controller's hard limits, and the kill switch blocks runs.
-- **Zones, never averages:** status is per zone, and the pot is as bad as its worst zone.
-- **Requirements from plants:** the suggestion is the intersection of the plants' ranges, and disagreeing plants produce a conflict.
-- **Claims:** unshipped, expired, wrong-token and already-claimed devices are refused with stable codes.
+Mocks live in the backend on purpose: clients talk to a real HTTP server that follows the contract, instead of carrying hand-written JSON. It is not a stub that returns fixed files. It applies the rules the real services will, and the three mocks agree with each other (subscribing in billing changes the Greenhaus entitlements).
+
+## What it knows
+
+**Greenhaus**
+- Tier limits (pots, zone grid size, how automated each metric may be), heater and calibration guards, safety limits only tightened within the controller's hard limits, and the kill switch.
+- Status per zone, never averaged. Requirements as the intersection of plant ranges, with conflicts.
+- Claim checks with stable codes.
+
+**Billing**
+- Public plans, subscribe, change and cancel. A token ending `-declined` is refused with 402, one ending `-renewal-fails` is accepted and then fails on renewal (the subscription becomes `past_due`).
+- A subscription lasts 30 days and renews on the mock clock. Cancelling keeps the plan until the period ends.
+- Purchase grants with a 7 day grace period when the order is returned: `active`, `at_risk`, `revoked`. The effective tier is the best of the subscription and the grants that still count.
+
+**Pulse device API**
+- A registry with the full lifecycle (`allocated`, `shipped`, `claimed`, `active`, `retired`). Registration reports every problem at once and is idempotent.
+- Claim with a one-time token stored as a SHA-256 hash. A wrong token is reported before an expired one, the token works once, and attempts are rate limited (5 a minute per device, 30 per caller, `429` with `Retry-After`).
+- Per-device rules, calibration, and commands that are idempotent on their id and expire. A simulated controller carries them out and refuses what exceeds its own hard limits, a run too soon after the last, the daily cap, or anything while the kill switch is on. Commands for an offline device wait and expire if it never returns.
+- Series with a window limit per resolution, and `X-Pulse-Truncated` when a raw series is cut.
+- Callers: service by default, or a user with `X-Mock-Caller: user:<subject>`, who sees only their own devices (others answer 404) and gets 403 on service operations.
 
 ## Run
 
@@ -18,28 +37,30 @@ docker compose up --build            # from the repository root, serves http://l
 dotnet run --project Greenhaus.MockServer --urls http://localhost:8090
 ```
 
-The base path is `/api/greenhaus/v1`, as in the contract. The contract itself is served at `/contracts/greenhaus-api.yaml`.
+The contracts are served at `/contracts/<file>`.
 
 ## Trying things out
 
-The mock does not check tokens. Two request headers change what it returns:
+The mock does not check tokens. Request headers change what it returns:
 
 | Header | Values | Effect |
 | --- | --- | --- |
-| `X-Mock-Tier` | `novice`, `gardener`, `druid` | Acts as that tier (default `gardener`) |
-| `X-Mock-Scenario` | `grant-at-risk` | Adds a purchase grant in the at-risk state to the entitlements |
+| `X-Mock-Tier` | `novice`, `gardener`, `druid` | The Greenhaus API acts as that tier. Without it the tier comes from the billing mock |
+| `X-Mock-Scenario` | `grant-at-risk` | Adds a purchase grant in the at-risk state to the Greenhaus entitlements |
+| `X-Mock-Caller` | `service` (default), `user:<subject>` | Who calls the Pulse device API |
 
-Seeded data:
+Mock-only controls, which are not part of any contract:
 
-| Pot | What it shows |
+| Call | Effect |
 | --- | --- |
-| Kitchen herbs | A simple pot, calibrated sensors, a pump in `auto`, everything in range |
-| Balcony bed | A 2x2 zone grid: one dry zone, one alkaline zone, uncalibrated soil sensors, a heater without a thermal cutoff |
-| Window sill | Basil and a cactus: the requirements suggestion reports a soil moisture conflict |
+| `POST /mock/reset` | Reseeds everything and resets the clock |
+| `POST /mock/clock/advance` `{ "days": 31 }` | Moves the mock clock, so a subscription renews, a grace period ends or a command expires |
+| `POST /mock/billing/grants` `{ "tier": "druid", "months": 3 }` | Stands in for `order.confirmed.v1`: a purchase grants a plan |
+| `POST /mock/billing/grants/{id}/return` and `.../restore` | Stands in for `order.returned.v1` and for the return being cancelled |
+| `POST /mock/pulse/devices/{id}/reading` | The device reports: a claimed device becomes active and online |
+| `POST /mock/pulse/devices/{id}/silence` | The device goes quiet and turns offline |
 
-Devices to claim: `ghx-demo-0001` with token `demo-token` (claimable), `ghx-demo-0002` with `demo-token-2` (not shipped), `ghx-demo-0003` with `expired-token` (expired).
-
-For end-to-end tests the mock also has `POST /mock/reset`, which reseeds its in-memory state. It is a test aid and not part of the contract.
+Seeded data. Greenhaus pots: **Kitchen herbs** (simple, calibrated, pump in `auto`), **Balcony bed** (2x2 zones, a dry zone, an alkaline zone, an uncalibrated soil sensor, a heater without a thermal cutoff) and **Window sill** (basil and a cactus disagree about moisture). The demo user starts on a paid Gardener plan. Pulse devices: `ghx-pot-kitchen` and `ghx-bed-balcony` (active, owned by `demo-user`), `ghx-demo-0001` (shipped, token `demo-token`), `ghx-demo-0002` (allocated, token `demo-token-2`) and `ghx-demo-0003` (shipped, token `expired-token`, expired).
 
 ## Contract tests
 
@@ -47,10 +68,6 @@ For end-to-end tests the mock also has `POST /mock/reset`, which reseeds its in-
 dotnet test
 ```
 
-Every response is checked against the OpenAPI document: the status must be documented for the operation and the body must match the schema, including formats and enums. One test walks every operation in the contract and fails if the mock does not serve one of them, so the contract and the mock cannot drift apart. A self-test proves the validator rejects wrong bodies and undocumented statuses.
+Every response is checked against its OpenAPI document: the status must be documented for the operation and the body must match the schema, including formats and enums. Authentication failures (`401`, `403`) are described once in each contract's security scheme, so a secured operation may answer them with a problem document. One test per API walks every operation in its contract and fails if the mock does not serve one, so the contracts and the mock cannot drift apart. Self-tests prove the validator rejects wrong bodies and undocumented statuses. The rule tests cover declined and failing cards, renewal and cancellation, grants at risk, claim states and rate limits, user visibility, commands (hard limits, expiry, idempotency, offline devices) and series windows.
 
 The same checks are meant to run against the real services later.
-
-## Not yet covered
-
-The billing API and the Pulse device API have contracts but no mock yet.

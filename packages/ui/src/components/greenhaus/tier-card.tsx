@@ -38,11 +38,12 @@ export function TierCard({ tier, limits, price, current, onChoose, className }: 
     t(`tier.ai.${limits.aiDataAccess}`),
     t('tier.automation', { metrics: autoMetrics }),
   ]
-  const priceText = price
+  const isFree = price ? price.amount === 0 : tier === 'novice'
+  const priceText = price && price.amount > 0
     ? t('tier.perMonth', {
         price: new Intl.NumberFormat(i18n.language, { style: 'currency', currency: price.currency }).format(price.amount),
       })
-    : tier === 'novice'
+    : isFree
       ? t('tier.free')
       : t('tier.priceUnknown')
 
@@ -57,7 +58,7 @@ export function TierCard({ tier, limits, price, current, onChoose, className }: 
           {current && <Badge className={tierLook[tier].badge}>{t('tier.current')}</Badge>}
         </div>
         <p className="text-sm text-muted-foreground">{t(`tier.tagline.${tier}`)}</p>
-        <p className={cn('font-display font-semibold', price || tier === 'novice' ? 'text-3xl' : 'text-xl')}>{priceText}</p>
+        <p className={cn('font-display font-semibold', price?.amount || isFree ? 'text-3xl' : 'text-xl')}>{priceText}</p>
       </CardHeader>
       <CardContent>
         <ul className="space-y-2 text-sm">

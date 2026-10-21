@@ -1,8 +1,9 @@
-import { TierCard, type Tier } from '@greenhaus/ui'
+import { Button, TierCard, type Tier } from '@greenhaus/ui'
 import { Info, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useEntitlements, usePrices, useTiers } from '~/api/hooks'
+import { useCancelSubscription, useEntitlements, usePrices, useSubscribe, useSubscription, useTiers } from '~/api/hooks'
+import { ApiError } from '~/api/http'
 import { CardGridSkeleton, LoadError } from '~/components/feedback'
 
 export function PlansPage() {
@@ -10,9 +11,32 @@ export function PlansPage() {
   const tiers = useTiers()
   const entitlements = useEntitlements()
   const prices = usePrices()
-  const [notice, setNotice] = useState(false)
+  const subscription = useSubscription()
+  const subscribe = useSubscribe()
+  const cancel = useCancelSubscription()
+  const [notice, setNotice] = useState<string | null>(null)
+  const [declineCard, setDeclineCard] = useState(false)
   const date = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'long' })
   const atRisk = entitlements.data?.sources.find((source) => source.status === 'at_risk')
+  const paid = subscription.data && subscription.data.status !== 'cancelled' ? subscription.data : null
+  const billingDown = prices.isError
+
+  const choose = (tier: Tier) => {
+    setNotice(null)
+    // The free tier is not bought: choosing it ends the paid plan at the end of the period.
+    if (tier === 'novice') {
+      cancel.mutate()
+      return
+    }
+    subscribe.mutate(
+      // The demo billing service declines a card whose token ends in "-declined".
+      { tier, paymentMethodToken: declineCard ? 'tok-declined' : 'tok-demo' },
+      {
+        onSuccess: () => setNotice(t('plans.subscribed', { tier: t(`tier.name.${tier}`) })),
+        onError: (error) => setNotice(error instanceof ApiError && error.status === 402 ? t('plans.declined') : t('app.errors.unknown')),
+      },
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -34,8 +58,36 @@ export function PlansPage() {
       {notice && (
         <p role="status" className="flex items-center gap-2 rounded-xl border bg-secondary p-3 text-sm font-semibold">
           <Info className="size-4" aria-hidden />
-          {t('plans.comingSoon')}
+          {notice}
         </p>
+      )}
+
+      {billingDown && (
+        <p role="note" className="text-sm text-muted-foreground">
+          {t('plans.billingDown')}
+        </p>
+      )}
+
+      {paid && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card p-4">
+          <p className="text-sm">
+            {paid.cancelAtPeriodEnd
+              ? t('plans.endsOn', { tier: t(`tier.name.${paid.tier}`), date: date.format(new Date(paid.currentPeriodEnd)) })
+              : t('plans.activeUntil', { tier: t(`tier.name.${paid.tier}`), date: date.format(new Date(paid.currentPeriodEnd)) })}
+          </p>
+          {!paid.cancelAtPeriodEnd && (
+            <Button variant="outline" size="sm" disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+              {t('plans.cancel')}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {import.meta.env.VITE_MOCK !== 'false' && !billingDown && (
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input type="checkbox" checked={declineCard} onChange={(event) => setDeclineCard(event.target.checked)} className="size-4 accent-primary" />
+          {t('plans.simulateDecline')}
+        </label>
       )}
 
       {(tiers.isError || entitlements.isError) && <LoadError onRetry={() => void tiers.refetch()} />}
@@ -49,7 +101,7 @@ export function PlansPage() {
                 limits={limits}
                 current={entitlements.data.tier === tier}
                 price={prices.data?.find((plan) => plan.tier === tier)?.pricePerMonth}
-                onChoose={(_chosen: Tier) => setNotice(true)}
+                onChoose={choose}
                 className="h-full"
               />
             </li>

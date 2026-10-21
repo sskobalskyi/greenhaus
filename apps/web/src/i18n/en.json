@@ -93,7 +93,13 @@
   "plans": {
     "title": "Plans",
     "subtitle": "Monitoring, alerts and safety are free for everyone. Plans add pots, history, assistant questions and more automation.",
-    "comingSoon": "Checkout comes with the billing service. Nothing was charged.",
+    "subscribed": "You are now on {{tier}}. Nothing real was charged: this is a demo billing service.",
+    "declined": "The card was declined, so your plan did not change.",
+    "cancel": "Cancel subscription",
+    "endsOn": "Your {{tier}} plan ends on {{date}}.",
+    "activeUntil": "Your {{tier}} plan renews on {{date}}.",
+    "simulateDecline": "Simulate a declined card (demo)",
+    "billingDown": "Billing is not reachable, so plans cannot be changed right now.",
     "atRiskTitle": "Your subscription is at risk",
     "atRiskBody": "You returned items from an order that gave you a plan. It stays active until {{date}}. Check your order to keep it.",
     "currentSource": "Active through {{date}}"

@@ -66,7 +66,7 @@ React app for pots, plants, controls, plans and the QR claim flow, in English an
 npm install                    # installs the web workspace
 docker compose up -d mock      # the mock backend on :8090
 npm run dev -w @greenhaus/web  # http://localhost:5174
-npm run e2e -w @greenhaus/web  # 26 end-to-end tests with an accessibility scan of every page
+npm run e2e -w @greenhaus/web  # 30 end-to-end tests with an accessibility scan of every page
 ```
 
 See [apps/web](apps/web/README.md) and [ADR 0002](docs/adr/0002-web-workspace-and-design-system-from-source.md).

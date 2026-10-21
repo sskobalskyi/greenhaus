@@ -60,6 +60,13 @@ public sealed class OpenApiContract
         var status = ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture);
         var documented = operation["responses"]!.AsObject();
         var entry = documented[status] ?? documented["default"];
+        // Authentication failures are described once, in the security scheme, not on every operation. A secured
+        // operation may answer 401 or 403 with a problem document.
+        if (entry is null && status is "401" or "403" && IsSecured(operation))
+        {
+            await VerifyProblem(response, method, pathTemplate, status);
+            return;
+        }
         if (entry is null)
         {
             var allowed = string.Join(", ", documented.Select(r => r.Key));
@@ -93,6 +100,18 @@ public sealed class OpenApiContract
             throw new Xunit.Sdk.XunitException(
                 $"{method} {pathTemplate} {status} does not match the schema:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}{Environment.NewLine}Body: {body}");
         }
+    }
+
+    private bool IsSecured(JsonNode operation) =>
+        (operation["security"] ?? _document["security"]) is JsonArray { Count: > 0 };
+
+    private async Task VerifyProblem(HttpResponseMessage response, string method, string pathTemplate, string status)
+    {
+        var media = response.Content.Headers.ContentType?.MediaType;
+        Xunit.Assert.True(media == "application/problem+json", $"{method} {pathTemplate} {status} should be a problem document, got {media}");
+        var problem = JsonNode.Parse(await response.Content.ReadAsStringAsync())!;
+        Xunit.Assert.Equal(int.Parse(status), problem["status"]!.GetValue<int>());
+        Xunit.Assert.False(string.IsNullOrEmpty(problem["code"]?.GetValue<string>()));
     }
 
     /// <summary>Joins the server base path of the contract to a path template, for building real URLs.</summary>
