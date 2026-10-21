@@ -1,0 +1,33 @@
+name: Contracts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and validate contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Lint OpenAPI
+        run: npx --yes @redocly/cli@latest lint contracts/openapi/*.yaml
+
+      - name: Validate AsyncAPI
+        run: |
+          for f in contracts/asyncapi/*.yaml; do
+            npx --yes @asyncapi/cli@latest validate "$f"
+          done
+
+      - name: Check the species catalog
+        run: |
+          jq -e '.species | length >= 30' data/species.json
+          jq -e '[.species[].id] | (length == (unique | length))' data/species.json
