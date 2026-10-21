@@ -1,0 +1,169 @@
+{
+  "app": {
+    "name": "Greenhaus",
+    "nav": { "pots": "My pots", "plans": "Plans", "guide": "Set-up guide" },
+    "mockTier": "Mock tier",
+    "mockTierLabel": "Mock:",
+    "loadFailed": "Could not load this. Is the API running? Start the mock with: docker compose up mock",
+    "retry": "Try again",
+    "errors": {
+      "thermal_cutoff_required": "A heater cannot run in auto mode without a hardware thermal cutoff.",
+      "calibration_required": "Calibrate the sensor before turning on auto mode.",
+      "kill_switch_on": "The kill switch is on, so nothing can run.",
+      "token_invalid": "We could not match this code to a device.",
+      "validation_failed": "Please check what you entered.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close"
+  },
+  "pots": {
+    "title": "My pots",
+    "subtitle": "Every pot and bed at a glance.",
+    "add": "Add a pot",
+    "name": "Name",
+    "kind": "What is it?",
+    "create": "Create pot",
+    "empty": "No pots yet. Add your first one.",
+    "limit": "Your {{tier}} plan includes {{count}} pots."
+  },
+  "pot": {
+    "back": "All pots",
+    "tabs": {
+      "overview": "Overview",
+      "plants": "Plants",
+      "requirements": "Requirements",
+      "controls": "Controls",
+      "care": "Care",
+      "devices": "Devices"
+    },
+    "view": {
+      "label": "View",
+      "simple": "Simple",
+      "zones": "Zones",
+      "changeFailed": "The view could not be changed"
+    },
+    "alerts": "Needs attention",
+    "noAlerts": "Nothing needs your attention.",
+    "plants": {
+      "title": "Plants in this pot",
+      "empty": "No plants yet.",
+      "add": "Add a plant",
+      "species": "Species",
+      "nickname": "Nickname",
+      "planted": "Planted {{date}}",
+      "remove": "Remove {{name}}",
+      "conflictTitle": "These plants want different conditions",
+      "conflictBody": "{{metrics}} do not overlap for the plants in this pot. Pick the range that matters most, or give the plants separate pots."
+    },
+    "requirements": {
+      "title": "What this pot needs",
+      "intro": "One set of targets for the whole pot. Sensors are compared with it zone by zone.",
+      "disabled": "Not measured",
+      "suggestion": "Suggested from the plants"
+    },
+    "controls": {
+      "title": "Controls",
+      "killSwitch": "Kill switch",
+      "killSwitchOn": "Everything is stopped",
+      "killSwitchOff": "Automation is allowed",
+      "stopAll": "Stop everything",
+      "resume": "Allow automation again",
+      "audit": "What happened",
+      "auditEmpty": "Nothing yet.",
+      "actor": { "automation": "Automation", "user": "You", "safety": "Safety" },
+      "noActuators": "No actuators are connected to this pot.",
+      "modeFailed": "The mode could not be changed",
+      "ranFor": "Started for {{seconds}} seconds"
+    },
+    "care": { "title": "Care tasks", "empty": "No tasks right now.", "open": "To do", "done": "Done" },
+    "devices": {
+      "title": "Linked controllers",
+      "empty": "No controller is linked yet. Scan the QR code on the box to add one.",
+      "online": "Online",
+      "offline": "Offline",
+      "lastSeen": "Last seen {{when}}",
+      "firmware": "Firmware {{version}}",
+      "cutoffYes": "Thermal cutoff declared",
+      "cutoffNo": "No thermal cutoff declared"
+    }
+  },
+  "plans": {
+    "title": "Plans",
+    "subtitle": "Monitoring, alerts and safety are free for everyone. Plans add pots, history, assistant questions and more automation.",
+    "comingSoon": "Checkout comes with the billing service. Nothing was charged.",
+    "atRiskTitle": "Your subscription is at risk",
+    "atRiskBody": "You returned items from an order that gave you a plan. It stays active until {{date}}. Check your order to keep it.",
+    "currentSource": "Active through {{date}}"
+  },
+  "upsell": {
+    "title": "This needs a higher plan",
+    "limit_reached": "You have reached a limit of your current plan.",
+    "tier_required": "This feature belongs to a higher plan.",
+    "see": "See plans",
+    "later": "Not now"
+  },
+  "claim": {
+    "title": "Claim your controller",
+    "missing": "Open this page from the QR code on the box.",
+    "device": "Device {{id}}",
+    "pick": "Which pot should it go into?",
+    "choosePot": "Choose a pot",
+    "noPots": "Create a pot first, then come back to this page.",
+    "go": "Add it to this pot",
+    "done": "Your controller is linked.",
+    "open": "Open the pot",
+    "reasons": {
+      "not_shipped": "This order has not shipped yet, so the code cannot be used.",
+      "already_claimed": "This controller already belongs to someone.",
+      "token_expired": "This code has expired. Contact the shop.",
+      "token_invalid": "We could not match this code to a device."
+    },
+    "channels": "What it measures",
+    "actuators": "What it controls"
+  },
+  "guide": {
+    "title": "Set-up guide",
+    "intro": "Everything you need to get a pot talking to Greenhaus.",
+    "kit": {
+      "title": "Get a ready kit",
+      "body": "The kit from our shop comes with a pot controller, sensors and a QR code on the box.",
+      "button": "Open the shop"
+    },
+    "diy": {
+      "title": "Build it yourself",
+      "body": "These are example searches for parts of each kind. Prices and quality vary, so check the details before you buy.",
+      "part": {
+        "soil": "Capacitive soil moisture sensor",
+        "temperature": "Temperature and humidity sensor",
+        "light": "Light sensor",
+        "ph": "pH probe (optional)",
+        "pump": "Small water pump with a tube",
+        "tank": "Tank level and overflow sensors"
+      }
+    },
+    "qr": {
+      "title": "Linking with the QR code",
+      "steps": [
+        "Unbox the controller and find the QR code on the box.",
+        "Scan it with your phone camera. The page opens in your browser.",
+        "Sign in, then choose the pot the controller should go into.",
+        "Calibrate the soil sensor once: dry in air, then wet in water.",
+        "Wait for the first reading. It shows up on the pot page within a minute."
+      ],
+      "note": "The code works only after your order has shipped and only once."
+    },
+    "safety": {
+      "title": "Stay safe with water and heat",
+      "items": [
+        "Use pots with drainage, and keep a tray under them.",
+        "Add an overflow sensor and a tank level sensor, so a pump never runs dry or floods.",
+        "Stop siphoning: lift the tube above the water line or add a siphon break, otherwise water can keep flowing after the pump stops.",
+        "Run a test watering and check the pump now and then. Greenhaus reminds you.",
+        "A heater needs a hardware thermal cutoff. Without one it can only run in notify mode."
+      ]
+    }
+  }
+}
