@@ -31,3 +31,16 @@ jobs:
         run: |
           jq -e '.species | length >= 30' data/species.json
           jq -e '[.species[].id] | (length == (unique | length))' data/species.json
+
+  mock-server:
+    name: Mock server and contract tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+      - name: Test the mock against the contract
+        run: dotnet test mock-server/GreenhausMock.slnx --configuration Release
+      - name: Build the container image
+        run: docker build -f mock-server/Dockerfile -t greenhaus-mock .

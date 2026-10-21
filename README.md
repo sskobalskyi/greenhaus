@@ -15,13 +15,14 @@ Greenhaus owns everything that is specific to plants: users and tiers, pots, zon
 
 ## Status
 
-Early. The first stream is the contract layer: HTTP APIs in OpenAPI, events and MQTT topics in AsyncAPI, and a mock backend that serves them so the UI and the services can be built in parallel.
+Early. The first stream is the contract layer: HTTP APIs in OpenAPI, events and MQTT topics in AsyncAPI, and a mock backend that serves them so the UI and the services can be built in parallel. The Greenhaus API mock is running and contract-tested. The billing and Pulse mocks are next.
 
 ## Layout
 
 ```
 contracts/openapi/     HTTP contracts: Greenhaus API, billing API, Pulse device API
 contracts/asyncapi/    integration events (RabbitMQ) and device topics (MQTT)
+mock-server/           .NET mock of the Greenhaus API with contract tests ([details](mock-server/README.md))
 data/                  curated data, such as the species catalog
 docs/adr/              architecture decision records
 ```
@@ -44,6 +45,13 @@ Validate locally:
 npx --yes @redocly/cli lint contracts/openapi/*.yaml
 npx --yes @asyncapi/cli validate contracts/asyncapi/integration-events.yaml
 npx --yes @asyncapi/cli validate contracts/asyncapi/device-mqtt.yaml
+```
+
+## Run the mock
+
+```powershell
+docker compose up --build   # http://localhost:8090/api/greenhaus/v1
+dotnet test mock-server/GreenhausMock.slnx   # checks every response against the contract
 ```
 
 ## Licence
