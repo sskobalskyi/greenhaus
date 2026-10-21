@@ -247,11 +247,22 @@ components:
           customerId: { type: string }
           sku: { type: string }
           model: { type: string }
-          claimTokenHash: { type: string }
+          claimTokenHash:
+            type: string
+            description: |
+              SHA-256 of the claim token (its UTF-8 bytes) as 64 hexadecimal characters, optionally written
+              `sha256:<hex>`. Pulse registers the device with it and rejects anything else. Same format as
+              `claimTokenHash` of the Pulse device API.
+            pattern: '^(sha256:)?[0-9A-Fa-f]{64}$'
           claimTokenExpiresAt: { type: string, format: date-time }
-          credentialHash: { type: string }
+          credentialHash:
+            type: string
+            description: Salted hash of the device's broker password. Opaque to Pulse, which stores it for the broker to verify.
           capabilities:
             type: object
+            description: |
+              What the device declared. This is what Pulse registers the device with, so it has to be complete: the
+              channels, and for every actuator the hard limits the device enforces itself.
             required: [channels, actuators]
             properties:
               channels:
@@ -260,16 +271,29 @@ components:
                   type: object
                   required: [id, metric]
                   properties:
-                    id: { type: string }
+                    id:
+                      type: string
+                      description: Unique within the device. Letters, digits, `.`, `_` and `-` only.
+                      pattern: '^[A-Za-z0-9._-]+$'
                     metric: { type: string }
+                    label: { type: string }
+                    unit: { type: string }
               actuators:
                 type: array
                 items:
                   type: object
-                  required: [id, kind]
+                  required: [id, kind, hardLimits]
                   properties:
                     id: { type: string }
                     kind: { type: string, enum: [pump, heater, lamp, fan, humidifier] }
+                    hardLimits:
+                      type: object
+                      description: Limits the device enforces whatever the cloud asks for. `maxRunSeconds` must not exceed `dailyCapSeconds`.
+                      required: [maxRunSeconds, minIntervalSeconds, dailyCapSeconds]
+                      properties:
+                        maxRunSeconds: { type: integer, minimum: 1 }
+                        minIntervalSeconds: { type: integer, minimum: 0 }
+                        dailyCapSeconds: { type: integer, minimum: 1 }
                     thermalCutoff: { type: boolean }
     DeviceClaimed:
       name: device.claimed.v1
