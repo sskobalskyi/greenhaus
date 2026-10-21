@@ -1,0 +1,192 @@
+using Greenhaus.Api.Auth;
+using Greenhaus.Api.Contracts;
+using Greenhaus.Api.Infrastructure;
+using Greenhaus.Api.Persistence;
+using Greenhaus.Domain;
+using Microsoft.EntityFrameworkCore;
+
+namespace Greenhaus.Api.Features;
+
+public static class ControlEndpoints
+{
+    /// <summary>A reading older than this means the controller stopped reporting.</summary>
+    private static readonly TimeSpan Stale = TimeSpan.FromMinutes(15);
+
+    public static void MapControls(this RouteGroupBuilder api)
+    {
+        api.MapGet("/pots/{potId:guid}/status", Status);
+
+        api.MapGet("/pots/{potId:guid}/devices", async (Guid potId, HttpContext http, GreenhausDbContext db, CancellationToken ct) =>
+        {
+            if (await db.OwnedPotAsync(potId, http.User.UserId(), ct) is null) return Problems.NotFound();
+            var devices = await db.Devices.AsNoTracking().Where(d => d.PotId == potId).OrderBy(d => d.LinkedAt).ToListAsync(ct);
+            return Results.Ok(devices.Select(d => new LinkedDeviceDto { DeviceId = d.DeviceId, Model = d.Model, Status = "unknown", ThermalCutoffDeclared = d.ThermalCutoffDeclared }).ToList());
+        });
+
+        api.MapGet("/pots/{potId:guid}/actuators", async (Guid potId, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, CancellationToken ct) =>
+        {
+            var user = http.User.UserId();
+            var pot = await db.OwnedPotAsync(potId, user, ct);
+            if (pot is null) return Problems.NotFound();
+            var tier = await entitlements.TierOfAsync(user, ct);
+            var actuators = await db.Actuators.AsNoTracking().Where(a => a.PotId == potId).OrderBy(a => a.Id).ToListAsync(ct);
+            return Results.Ok(actuators.Select(a => ToDto(a, pot, tier)).ToList());
+        });
+
+        api.MapPut("/pots/{potId:guid}/actuators/{actuatorId}/mode", async (Guid potId, string actuatorId, ModeUpdate body, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, EventPublisher events, TimeProvider clock, CancellationToken ct) =>
+        {
+            var user = http.User.UserId();
+            var pot = await db.OwnedPotAsync(potId, user, ct);
+            if (pot is null) return Problems.NotFound();
+            var actuator = await db.Actuators.FirstOrDefaultAsync(a => a.PotId == potId && a.Id == actuatorId, ct);
+            if (actuator is null) return Problems.NotFound("Unknown actuator");
+            if (body.Mode is null) return Problems.Invalid("A mode is required");
+
+            var tier = await entitlements.TierOfAsync(user, ct);
+            var cutoff = await db.Devices.AnyAsync(d => d.DeviceId == actuator.DeviceId && d.ThermalCutoffDeclared, ct);
+            var metric = ActuatorPolicy.MetricFor(actuator.Kind);
+            var sensors = await db.Channels.Where(c => c.PotId == potId && c.Active && c.Metric == metric).ToListAsync(ct);
+            var calibrated = sensors.Count > 0 && sensors.All(c => c.CalibratedAt is not null);
+
+            switch (ActuatorPolicy.CheckMode(actuator.Kind, body.Mode.Value, tier, cutoff, calibrated))
+            {
+                case ModeCheck.TierRequired:
+                    await events.LimitReachedAsync(user, "automation", tier, ct);
+                    return Problems.Fail(403, "tier_required", "This automation needs a higher tier", null, "automation", TierPolicy.LowestTierAllowingAuto(metric));
+                case ModeCheck.ThermalCutoffRequired:
+                    return Problems.Fail(400, "thermal_cutoff_required", "A heater needs a declared thermal cutoff before it can run automatically");
+                case ModeCheck.CalibrationRequired:
+                    return Problems.Fail(400, "calibration_required", "Calibrate the soil moisture sensor before automatic watering");
+            }
+
+            var before = actuator.Mode;
+            actuator.Mode = body.Mode.Value;
+            db.AddAudit(potId, "user", "mode_changed", $"{before} -> {actuator.Mode}".ToLowerInvariant(), actuator.Id, null, clock);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToDto(actuator, pot, tier));
+        });
+
+        api.MapPost("/pots/{potId:guid}/actuators/{actuatorId}/run", async (Guid potId, string actuatorId, RunRequest body, HttpContext http, GreenhausDbContext db, ICommandSender commands, TimeProvider clock, CancellationToken ct) =>
+        {
+            var user = http.User.UserId();
+            var pot = await db.OwnedPotAsync(potId, user, ct);
+            if (pot is null) return Problems.NotFound();
+            var actuator = await db.Actuators.FirstOrDefaultAsync(a => a.PotId == potId && a.Id == actuatorId, ct);
+            if (actuator is null) return Problems.NotFound("Unknown actuator");
+            if (body.DurationSeconds is not (>= 1 and <= 3600)) return Problems.Invalid("Duration must be 1 to 3600 seconds");
+            if (pot.KillSwitch) return Problems.Fail(409, "kill_switch_on", "The kill switch is on", "Turn it off to run an actuator");
+
+            var seconds = Math.Min(body.DurationSeconds.Value, actuator.MaxRunSeconds);
+            var commandId = await commands.RunAsync(actuator.DeviceId, actuator.Id, seconds, ct);
+            actuator.LastRunAt = clock.GetUtcNow();
+            db.AddAudit(potId, "user", "run", $"{seconds} s requested by the user", actuator.Id, "sent", clock);
+            await db.SaveChangesAsync(ct);
+            return Results.Json(new CommandReceiptDto { CommandId = commandId, Status = "sent" }, statusCode: 202);
+        });
+
+        api.MapPut("/pots/{potId:guid}/actuators/{actuatorId}/limits", async (Guid potId, string actuatorId, SafetyLimitsDto body, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, TimeProvider clock, CancellationToken ct) =>
+        {
+            var user = http.User.UserId();
+            var pot = await db.OwnedPotAsync(potId, user, ct);
+            if (pot is null) return Problems.NotFound();
+            var actuator = await db.Actuators.FirstOrDefaultAsync(a => a.PotId == potId && a.Id == actuatorId, ct);
+            if (actuator is null) return Problems.NotFound("Unknown actuator");
+
+            var hard = new SafetyLimits(actuator.HardMaxRunSeconds, actuator.HardMinIntervalSeconds, actuator.HardDailyCapSeconds);
+            if (!ActuatorPolicy.WithinHardLimits(body.ToDomain(), hard))
+                return Problems.Fail(400, "limits_beyond_hard", "Limits can only be tightened within the controller's hard limits");
+            actuator.MaxRunSeconds = body.MaxRunSeconds;
+            actuator.MinIntervalSeconds = body.MinIntervalSeconds;
+            actuator.DailyCapSeconds = body.DailyCapSeconds;
+            actuator.MaxFruitlessRuns = body.MaxFruitlessRuns;
+            db.AddAudit(potId, "user", "limit_changed", "Safety limits tightened", actuator.Id, null, clock);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToDto(actuator, pot, await entitlements.TierOfAsync(user, ct)));
+        });
+
+        api.MapPut("/pots/{potId:guid}/kill-switch", async (Guid potId, KillSwitchUpdate body, HttpContext http, GreenhausDbContext db, TimeProvider clock, CancellationToken ct) =>
+        {
+            var user = http.User.UserId();
+            var pot = await db.OwnedPotAsync(potId, user, ct);
+            if (pot is null) return Problems.NotFound();
+            if (body.Enabled is null) return Problems.Invalid("enabled is required");
+            if (pot.KillSwitch != body.Enabled)
+            {
+                pot.KillSwitch = body.Enabled.Value;
+                db.AddAudit(potId, "user", "kill_switch", pot.KillSwitch ? "All automation stopped by the user" : "Automation resumed by the user", null, null, clock);
+                await db.SaveChangesAsync(ct);
+            }
+            return Results.Ok(pot.ToDto());
+        });
+
+        api.MapGet("/pots/{potId:guid}/audit-log", async (Guid potId, int? limit, HttpContext http, GreenhausDbContext db, CancellationToken ct) =>
+        {
+            if (await db.OwnedPotAsync(potId, http.User.UserId(), ct) is null) return Problems.NotFound();
+            if (limit is < 1 or > 200) return Problems.Invalid("limit must be 1 to 200");
+            var entries = await db.Audit.AsNoTracking().Where(a => a.PotId == potId).OrderByDescending(a => a.At).Take(limit ?? 50).ToListAsync(ct);
+            return Results.Ok(entries.Select(a => a.ToDto()).ToList());
+        });
+
+        api.MapPut("/pots/{potId:guid}/channels/{channelId}/calibration", async (Guid potId, string channelId, CalibrationDto body, HttpContext http, GreenhausDbContext db, TimeProvider clock, CancellationToken ct) =>
+        {
+            if (await db.OwnedPotAsync(potId, http.User.UserId(), ct) is null) return Problems.NotFound();
+            var channel = await db.Channels.FirstOrDefaultAsync(c => c.PotId == potId && c.ChannelId == channelId && c.Active, ct);
+            if (channel is null) return Problems.NotFound("Unknown channel");
+            if (body.DryRaw == body.WetRaw) return Problems.Invalid("Dry and wet raw values must differ");
+            channel.DryRaw = body.DryRaw;
+            channel.WetRaw = body.WetRaw;
+            channel.CalibratedAt = clock.GetUtcNow();
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(new CalibrationDto { DryRaw = body.DryRaw, WetRaw = body.WetRaw, CalibratedAt = channel.CalibratedAt });
+        });
+    }
+
+    private static ActuatorDto ToDto(ActuatorEntity a, PotEntity pot, Tier tier)
+    {
+        var metric = ActuatorPolicy.MetricFor(a.Kind);
+        return new ActuatorDto
+        {
+            Id = a.Id, Kind = a.Kind, Metric = metric, Mode = a.Mode,
+            State = pot.KillSwitch ? ActuatorState.Blocked : ActuatorState.Idle,
+            MaxModeForTier = TierPolicy.LimitsFor(tier).MaxModeFor(metric),
+            Limits = new SafetyLimitsDto { MaxRunSeconds = a.MaxRunSeconds, MinIntervalSeconds = a.MinIntervalSeconds, DailyCapSeconds = a.DailyCapSeconds, MaxFruitlessRuns = a.MaxFruitlessRuns },
+            HardLimits = new SafetyLimitsDto { MaxRunSeconds = a.HardMaxRunSeconds, MinIntervalSeconds = a.HardMinIntervalSeconds, DailyCapSeconds = a.HardDailyCapSeconds },
+            LastRunAt = a.LastRunAt,
+        };
+    }
+
+    private static async Task<IResult> Status(Guid potId, HttpContext http, GreenhausDbContext db, IReadingSource readings, TimeProvider clock, CancellationToken ct)
+    {
+        if (await db.OwnedPotAsync(potId, http.User.UserId(), ct) is null) return Problems.NotFound();
+        var zones = await db.Zones.AsNoTracking().Where(z => z.PotId == potId).OrderBy(z => z.Row).ThenBy(z => z.Col).ToListAsync(ct);
+        var channels = await db.Channels.AsNoTracking().Where(c => c.PotId == potId && c.Active).ToListAsync(ct);
+        var targets = (await db.Requirements.AsNoTracking().Where(r => r.PotId == potId).ToListAsync(ct)).ToDictionary(r => r.Metric, r => r.ToDraft());
+        var latest = (await readings.LatestAsync(channels, ct)).ToDictionary(r => (r.DeviceId, r.ChannelId));
+        var now = clock.GetUtcNow();
+
+        var zoneStatuses = new List<ZoneStatusDto>();
+        var alerts = new List<ActiveAlertDto>();
+        foreach (var zone in zones)
+        {
+            var metrics = new List<MetricReadingDto>();
+            foreach (var channel in channels.Where(c => c.ZoneId == zone.Id).OrderBy(c => c.Metric))
+            {
+                if (!latest.TryGetValue((channel.DeviceId, channel.ChannelId), out var reading))
+                {
+                    metrics.Add(new MetricReadingDto { Metric = channel.Metric, ChannelId = channel.ChannelId, Unit = channel.Unit, State = ReadingState.Unknown });
+                    continue;
+                }
+                var stale = now - reading.At > Stale;
+                var (state, direction) = stale ? (ReadingState.Offline, null) : ReadingEvaluator.Evaluate(reading.Value, targets.GetValueOrDefault(channel.Metric));
+                metrics.Add(new MetricReadingDto { Metric = channel.Metric, ChannelId = channel.ChannelId, Value = reading.Value, Unit = channel.Unit, State = state, Direction = direction, UpdatedAt = reading.At });
+                if (state == ReadingState.Attention)
+                    alerts.Add(new ActiveAlertDto { Id = $"{channel.ChannelId}:{direction}", Metric = channel.Metric, ZoneId = zone.Id, Since = reading.At, Message = $"{MetricNames.Key(channel.Metric)} is {direction} the target" });
+            }
+            zoneStatuses.Add(new ZoneStatusDto { ZoneId = zone.Id, State = ReadingEvaluator.Worst(metrics.Select(m => m.State)), Metrics = metrics });
+        }
+
+        var state2 = ReadingEvaluator.Worst(zoneStatuses.Select(z => z.State));
+        var worst = zoneStatuses.FirstOrDefault(z => z.State == state2 && state2 is ReadingState.Attention or ReadingState.Offline);
+        return Results.Ok(new PotStatusDto { PotId = potId, State = state2, WorstZoneId = worst?.ZoneId, Zones = zoneStatuses, Alerts = alerts });
+    }
+}
