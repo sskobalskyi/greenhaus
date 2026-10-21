@@ -60,8 +60,11 @@ public class MockStore
     public Dictionary<string, ClaimableDevice> Devices { get; } = [];
     public object Sync { get; } = new();
 
-    public MockStore(string speciesPath)
+    private readonly Billing.BillingStore _billing;
+
+    public MockStore(string speciesPath, Billing.BillingStore billing)
     {
+        _billing = billing;
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         Species = JsonSerializer.Deserialize<SpeciesFile>(File.ReadAllText(speciesPath), options)!.Species;
         Seed();
@@ -110,6 +113,35 @@ public class MockStore
     public static Tier LowestTierAllowingAuto(Metric metric) =>
         new[] { Tier.Novice, Tier.Gardener, Tier.Druid }
             .First(t => LimitsFor(t).Automation.First(a => a.Metric == metric).MaxMode == ControlMode.Auto);
+
+    /// <summary>The tier the demo user is on: what billing says, and Novice when nothing is paid or granted.</summary>
+    public Tier DefaultTier() => _billing.EffectiveTier() ?? Tier.Novice;
+
+    /// <summary>Entitlements built from the billing mock: the subscription and every grant that still counts.</summary>
+    public Entitlements EntitlementsFromBilling()
+    {
+        var tier = DefaultTier();
+        var sources = new List<EntitlementSource>();
+        if (_billing.Current() is { Status: "active" or "past_due" } subscription)
+        {
+            sources.Add(new EntitlementSource
+            {
+                Type = "subscription", Tier = subscription.Tier, Status = subscription.Status, ValidUntil = subscription.CurrentPeriodEnd,
+            });
+        }
+        foreach (var grant in _billing.Grants().Where(g => g.Status != "revoked"))
+        {
+            sources.Add(new EntitlementSource
+            {
+                Type = "purchase_grant", Tier = grant.Tier, Status = grant.Status, OrderId = grant.OrderId,
+                ValidUntil = grant.ValidUntil, GraceEndsAt = grant.GraceEndsAt,
+            });
+        }
+        return new Entitlements
+        {
+            Tier = tier, Limits = LimitsFor(tier), Usage = new Usage { Pots = Pots.Count, AiQuestionsThisMonth = 3 }, Sources = sources,
+        };
+    }
 
     public Entitlements EntitlementsFor(Tier tier, string? scenario)
     {

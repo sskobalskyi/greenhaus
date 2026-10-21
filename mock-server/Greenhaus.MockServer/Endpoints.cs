@@ -12,7 +12,7 @@ public static class Endpoints
 
     /// <summary>The mock reads the tier from X-Mock-Tier so clients can try every tier. Default is the demo user's tier.</summary>
     private static Tier TierOf(HttpContext ctx, MockStore store) =>
-        Enum.TryParse<Tier>(ctx.Request.Headers["X-Mock-Tier"].FirstOrDefault(), ignoreCase: true, out var tier) ? tier : store.User.Tier;
+        Enum.TryParse<Tier>(ctx.Request.Headers["X-Mock-Tier"].FirstOrDefault(), ignoreCase: true, out var tier) ? tier : store.DefaultTier();
 
     private static Tier NextTier(Tier tier) => tier == Tier.Novice ? Tier.Gardener : Tier.Druid;
 
@@ -55,7 +55,14 @@ public static class Endpoints
 
         api.MapGet("/me/entitlements", (HttpContext ctx, MockStore s) =>
         {
-            lock (s.Sync) return Results.Ok(s.EntitlementsFor(TierOf(ctx, s), ctx.Request.Headers["X-Mock-Scenario"].FirstOrDefault()));
+            lock (s.Sync)
+            {
+                var scenario = ctx.Request.Headers["X-Mock-Scenario"].FirstOrDefault();
+                // Without a tier header the entitlements come from the billing mock, so subscribing changes them.
+                return ctx.Request.Headers.ContainsKey("X-Mock-Tier") || scenario is not null
+                    ? Results.Ok(s.EntitlementsFor(TierOf(ctx, s), scenario))
+                    : Results.Ok(s.EntitlementsFromBilling());
+            }
         });
 
         api.MapGet("/tiers", () =>
