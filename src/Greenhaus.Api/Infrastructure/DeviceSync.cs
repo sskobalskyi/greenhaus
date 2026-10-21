@@ -43,6 +43,7 @@ public static class PulseProblems
         404 => Problems.NotFound("Unknown device"),
         409 => Problems.Fail(409, e.Code, e.Message),
         429 => Problems.Fail(429, "rate_limited", "Too many attempts, try again shortly"),
+        501 => Problems.Fail(503, "pulse_not_supported", "The device platform does not support this yet"),
         _ => Problems.Fail(503, "pulse_unavailable", "The device platform is not available right now"),
     };
 }

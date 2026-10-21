@@ -114,7 +114,12 @@ public sealed class HttpPulseClient(HttpClient http) : IPulseClient
         using (response)
         {
             if (allowNotFound && response.StatusCode == HttpStatusCode.NotFound) return null;
-            var problem = await response.Content.ReadFromJsonAsync<ProblemWire>(Json, ct).ConfigureAwait(false) is { } p ? p : null;
+            ProblemWire? problem = null;
+            try { problem = await response.Content.ReadFromJsonAsync<ProblemWire>(Json, ct); }
+            catch (JsonException) { /* an empty or foreign body: not a problem document */ }
+            // A 404 without a problem document is a route Pulse does not have (it is older than the contract), not an unknown device.
+            if (response.StatusCode == HttpStatusCode.NotFound && problem?.Code is null)
+                throw new PulseException(501, "pulse_not_supported", "This Pulse does not offer that operation yet");
             throw new PulseException((int)response.StatusCode, problem?.Code ?? "pulse_error", problem?.Title ?? response.ReasonPhrase ?? "Pulse refused the request");
         }
     }

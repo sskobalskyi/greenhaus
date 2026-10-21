@@ -71,6 +71,17 @@ public class HttpPulseClientTests
     }
 
     [Fact]
+    public async Task A_route_pulse_does_not_have_is_not_supported_rather_than_an_unknown_device_or_a_crash()
+    {
+        var (client, _) = Make((_, _) => new HttpResponseMessage(HttpStatusCode.NotFound));
+        var e = await Assert.ThrowsAsync<PulseException>(() => client.SetRulesAsync("kit-1", [], default));
+        Assert.Equal("pulse_not_supported", e.Code);
+
+        var (broken, _) = Make((_, _) => Json(HttpStatusCode.InternalServerError, "<html>oops</html>", "text/html"));
+        Assert.Equal("pulse_error", (await Assert.ThrowsAsync<PulseException>(() => broken.ClaimAsync("kit-1", "t", "u", default))).Code);
+    }
+
+    [Fact]
     public async Task A_run_command_uses_the_contracts_names_and_an_expiry()
     {
         var id = Guid.NewGuid();
