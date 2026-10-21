@@ -38,6 +38,10 @@
     "killSwitch": "Kill switch on",
     "noReadings": "Waiting for the first readings"
   },
+  "zone": {
+    "default": "Zone {{n}}",
+    "whole": "Whole pot"
+  },
   "zoneMap": {
     "title": "Zone map",
     "metric": "Metric shown",

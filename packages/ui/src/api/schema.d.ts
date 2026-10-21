@@ -692,7 +692,12 @@ export interface components {
             id: string;
             row: number;
             col: number;
-            label: string;
+            /**
+             * @description A name the user gave the zone. Absent until they do, and the client then shows a localized
+             *     default such as "Zone 3" (numbered by row and column) or "Whole pot" in the Simple view.
+             *     The API never returns a default label, so the language of the interface is the client's choice.
+             */
+            label?: string;
         };
         Plant: {
             /** Format: uuid */
