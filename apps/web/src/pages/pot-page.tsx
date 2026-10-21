@@ -19,10 +19,6 @@ import {
   TabsTrigger,
   ToggleGroup,
   ToggleGroupItem,
-  defaultUnit,
-  formatValue,
-  metricIcon,
-  metrics,
   zoneName,
   type ControlMode,
   type Schemas,
@@ -54,6 +50,7 @@ import {
 } from '~/api/hooks'
 import { ApiError } from '~/api/http'
 import { BlockSkeleton, LoadError } from '~/components/feedback'
+import { CalibrationDialog, CareForm, PotActions, RequirementsTab } from '~/components/pot-tools'
 import { UpsellDialog } from '~/components/upsell-dialog'
 
 type Pot = Schemas['Pot']
@@ -248,42 +245,7 @@ function Plants({ pot }: { pot: Pot }) {
   )
 }
 
-// ---- requirements ---------------------------------------------------------------------------------
-
-function Requirements({ pot }: { pot: Pot }) {
-  const { t, i18n } = useTranslation()
-  const requirements = useRequirements(pot.id)
-  if (requirements.isError) return <LoadError />
-  if (!requirements.data) return <BlockSkeleton />
-
-  return (
-    <section aria-labelledby="req-title" className="space-y-3">
-      <h2 id="req-title" className="text-xl font-semibold">
-        {t('pot.requirements.title')}
-      </h2>
-      <p className="text-muted-foreground">{t('pot.requirements.intro')}</p>
-      <ul className="divide-y rounded-xl border bg-card">
-        {metrics.map((metric) => {
-          const item = requirements.data.metrics.find((m) => m.metric === metric)
-          const Icon = metricIcon[metric]
-          return (
-            <li key={metric} className="flex items-center justify-between gap-3 p-3">
-              <span className="flex items-center gap-2 font-semibold">
-                <Icon className="size-4" aria-hidden />
-                {t(`metric.${metric}`)}
-              </span>
-              <span className="text-sm tabular-nums text-muted-foreground">
-                {item?.enabled && item.min !== undefined && item.max !== undefined
-                  ? `${formatValue(metric, item.min, i18n.language)} – ${formatValue(metric, item.max, i18n.language)} ${defaultUnit[metric]}`.trim()
-                  : t('pot.requirements.disabled')}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-    </section>
-  )
-}
+// ---- requirements (the editor lives in pot-tools) -------------------------------------------------
 
 // ---- controls -------------------------------------------------------------------------------------
 
@@ -295,7 +257,12 @@ function Controls({ pot, onPlanLimit }: { pot: Pot; onPlanLimit: (error: ApiErro
   const setMode = useSetMode(pot.id)
   const run = useRunActuator(pot.id)
   const kill = useKillSwitch(pot.id)
+  const status = usePotStatus(pot.id)
   const [notice, setNotice] = useState<string | null>(null)
+  const [needsCalibration, setNeedsCalibration] = useState(false)
+  const [calibrating, setCalibrating] = useState(false)
+  const [calibrated, setCalibrated] = useState(false)
+  const soilChannels = [...new Set((status.data?.zones ?? []).flatMap((z) => z.metrics).filter((m) => m.metric === 'soil_moisture' && m.channelId).map((m) => m.channelId!))]
 
   if (actuators.isError) return <LoadError />
   if (!actuators.data) return <BlockSkeleton className="h-72" />
@@ -304,6 +271,7 @@ function Controls({ pot, onPlanLimit }: { pot: Pot; onPlanLimit: (error: ApiErro
     tiers.data?.find((tier) => tier.limits.automation.some((a) => a.metric === metric && a.maxMode === 'auto'))?.tier
   const fail = (error: unknown) => {
     if (error instanceof ApiError && error.isPlanLimit) onPlanLimit(error)
+    else if (error instanceof ApiError && error.code === 'calibration_required') setNeedsCalibration(true)
     else setNotice(errorText(t, error))
   }
   const time = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'short', timeStyle: 'short' })
@@ -326,6 +294,24 @@ function Controls({ pot, onPlanLimit }: { pot: Pot; onPlanLimit: (error: ApiErro
       {notice && (
         <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm font-semibold text-destructive">
           {notice}
+        </p>
+      )}
+
+      {needsCalibration && soilChannels.length > 0 && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-attention/60 bg-attention/10 p-4">
+          <div>
+            <p className="font-semibold">{t('pot.controls.calibrateTitle')}</p>
+            <p className="text-sm">{t('pot.controls.calibrateBody')}</p>
+          </div>
+          <Button size="sm" onClick={() => setCalibrating(true)}>
+            {t('pot.controls.calibrate')}
+          </Button>
+        </div>
+      )}
+      <CalibrationDialog potId={pot.id} channelIds={soilChannels} open={calibrating} onOpenChange={setCalibrating} onDone={() => { setNeedsCalibration(false); setNotice(null); setCalibrated(true) }} />
+      {calibrated && (
+        <p role="status" className="text-sm font-semibold text-ok">
+          {t('pot.controls.calibrated')}
         </p>
       )}
 
@@ -383,6 +369,7 @@ function Care({ pot }: { pot: Pot }) {
 
   return (
     <div className="space-y-6">
+      <CareForm potId={pot.id} />
       <section aria-labelledby="open-title" className="space-y-2">
         <h2 id="open-title" className="text-xl font-semibold">
           {t('pot.care.open')}
@@ -471,7 +458,10 @@ export function PotPage() {
             <h1 className="text-3xl font-semibold">{pot.data.name}</h1>
             <p className="text-muted-foreground">{[t(`pot.kind.${pot.data.kind}`), pot.data.location].filter(Boolean).join(' · ')}</p>
           </div>
-          {status.data && <StatusChip state={status.data.state} />}
+          <div className="flex flex-wrap items-center gap-3">
+            {status.data && <StatusChip state={status.data.state} />}
+            <PotActions pot={pot.data} />
+          </div>
         </div>
       </div>
 
@@ -490,7 +480,7 @@ export function PotPage() {
           <Plants pot={pot.data} />
         </TabsContent>
         <TabsContent value="requirements" className="pt-4">
-          <Requirements pot={pot.data} />
+          <RequirementsTab pot={pot.data} />
         </TabsContent>
         <TabsContent value="controls" className="pt-4">
           <Controls pot={pot.data} onPlanLimit={setUpsell} />

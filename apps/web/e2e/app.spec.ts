@@ -193,6 +193,82 @@ test.describe('checkout', () => {
     await expect(page.getByRole('button', { name: 'Cancel subscription' })).toHaveCount(0)
   })
 })
+
+test.describe('editing a pot', () => {
+  test('requirements can be changed and are kept', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Kitchen herbs' }).click()
+    await page.getByRole('tab', { name: 'Requirements' }).click()
+    const minimum = page.getByRole('slider', { name: 'Temperature, minimum' })
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+    const before = Number(await minimum.getAttribute('aria-valuenow'))
+    await minimum.focus()
+    await page.keyboard.press('ArrowRight')
+    await page.keyboard.press('ArrowRight')
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await expect(page.getByRole('status')).toContainText('Saved')
+
+    await page.reload()
+    await page.getByRole('tab', { name: 'Requirements' }).click()
+    await expect(page.getByRole('slider', { name: 'Temperature, minimum' })).toHaveAttribute('aria-valuenow', String(before + 1))
+  })
+
+  test('plants that disagree show up in the editor and the suggestion can be used', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Window sill' }).click()
+    await page.getByRole('tab', { name: 'Requirements' }).click()
+    await expect(page.getByRole('note')).toContainText('soil moisture')
+    // The saved targets already are the suggestion, so changing one makes them differ and the suggestion brings them back.
+    await page.getByRole('slider', { name: 'Temperature, minimum' }).focus()
+    await page.keyboard.press('ArrowRight')
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeEnabled()
+    await page.getByRole('button', { name: 'Use the suggestion from the plants' }).click()
+    await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
+  })
+
+  test('automatic watering asks for calibration, then works', async ({ page }) => {
+    await asTier(page, 'druid')
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Balcony bed' }).click()
+    await page.getByRole('tab', { name: 'Controls' }).click()
+    const pump = page.locator('[data-slot="card"]', { hasText: 'Water pump' })
+    await pump.getByRole('radio', { name: 'Auto' }).click()
+    await expect(page.getByText('Calibrate before automating')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Calibrate sensors' }).click()
+    await page.getByLabel('Raw value with the sensor dry, in the air').fill('3100')
+    await page.getByLabel('Raw value with the sensor wet, in water').fill('1300')
+    await page.getByRole('button', { name: 'Save calibration' }).click()
+    await expect(page.getByText('The sensors are calibrated')).toBeVisible()
+
+    await pump.getByRole('radio', { name: 'Auto' }).click()
+    await expect(pump.getByRole('radio', { name: 'Auto' })).toBeChecked()
+  })
+
+  test('a custom care task can be added', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Kitchen herbs' }).click()
+    await page.getByRole('tab', { name: 'Care' }).click()
+    await page.getByLabel('What needs doing').fill('Wipe the leaves')
+    await page.getByLabel('Due date').fill('2026-12-01')
+    await page.getByRole('button', { name: 'Add task' }).click()
+    await expect(page.getByText('Wipe the leaves')).toBeVisible()
+  })
+
+  test('a pot can be renamed and deleted', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('link', { name: 'Window sill' }).click()
+    await page.getByRole('button', { name: 'Rename' }).click()
+    await page.getByLabel('New name').fill('Bathroom ferns')
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'Bathroom ferns' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Delete' }).click()
+    await page.getByRole('button', { name: 'Delete this pot' }).click()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('link', { name: 'Bathroom ferns' })).toHaveCount(0)
+  })
+})
 test.describe('language', () => {
   test('switches to Ukrainian, including the default zone names', async ({ page }) => {
     await page.goto('/')
@@ -230,6 +306,17 @@ test.describe('accessibility', () => {
         expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([])
       })
     }
+  }
+
+  for (const tab of ['Requirements', 'Controls', 'Care']) {
+    test(`the ${tab} tab has no violations`, async ({ page }) => {
+      await page.goto('/')
+      await page.getByRole('link', { name: 'Balcony bed' }).click()
+      await page.getByRole('tab', { name: tab }).click()
+      await page.waitForLoadState('networkidle')
+      const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze()
+      expect(results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([])
+    })
   }
 
   test('a pot page has no violations', async ({ page }) => {
