@@ -70,11 +70,20 @@ public class ApiTests(GreenhausFixture api)
         await Json(Call(user, "GET", "/pots/{potId}/audit-log", route), HttpStatusCode.OK);
         await Json(Call(user, "PUT", "/pots/{potId}/kill-switch", route, new { enabled = false }), HttpStatusCode.OK);
 
+        var deviceId = "walk-" + Guid.NewGuid().ToString("N")[..8];
+        api.Pulse.Add(FakePulse.Kit(deviceId), "secret-token");
+        await Json(Call(user, "GET", "/claims/preview", query: $"deviceId={deviceId}&token=secret-token"), HttpStatusCode.OK);
+        await Json(Call(user, "POST", "/claims", body: new { deviceId, token = "secret-token", potId }), HttpStatusCode.Created);
+        await Json(Call(user, "GET", "/pots/{potId}/devices", route), HttpStatusCode.OK);
+        await Json(Call(user, "PUT", "/pots/{potId}/actuators/{actuatorId}/mode", new { potId, actuatorId = "heater" }, new { mode = "notify" }), HttpStatusCode.OK);
+        await Json(Call(user, "POST", "/pots/{potId}/actuators/{actuatorId}/run", new { potId, actuatorId = "pump" }, new { durationSeconds = 10 }), HttpStatusCode.Accepted);
+        await Json(Call(user, "PUT", "/pots/{potId}/actuators/{actuatorId}/limits", new { potId, actuatorId = "pump" }, new { maxRunSeconds = 10, minIntervalSeconds = 900, dailyCapSeconds = 60 }), HttpStatusCode.OK);
+        await Json(Call(user, "PUT", "/pots/{potId}/channels/{channelId}/calibration", new { potId, channelId = "soil" }, new { dryRaw = 800, wetRaw = 300 }), HttpStatusCode.OK);
+
         await Json(Call(user, "DELETE", "/pots/{potId}/plants/{plantId}", new { potId, plantId = plant["id"]!.GetValue<string>() }), HttpStatusCode.NoContent);
         await Call(user, "DELETE", "/pots/{potId}", route);
 
-        // Needs a linked controller, which arrives with the Pulse integration.
-        api.Client.AssertCovers("setActuatorMode", "runActuator", "setActuatorLimits", "calibrateChannel", "previewClaim", "claimDevice");
+        api.Client.AssertCovers();
     }
 
     [Fact]

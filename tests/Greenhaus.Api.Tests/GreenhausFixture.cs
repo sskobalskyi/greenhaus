@@ -2,6 +2,7 @@ using Greenhaus.Api.Persistence;
 using Greenhaus.ContractTesting;
 using Greenhaus.Domain;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
@@ -16,6 +17,7 @@ public sealed class GreenhausFixture : IAsyncLifetime
 
     public OpenApiContract Contract { get; private set; } = null!;
     public ContractClient Client { get; private set; } = null!;
+    public FakePulse Pulse { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -26,6 +28,7 @@ public sealed class GreenhausFixture : IAsyncLifetime
             b.UseSetting("ConnectionStrings:Greenhaus", _postgres.GetConnectionString());
             b.UseSetting("Auth:Mode", "Development");
             b.UseSetting("Species:Path", Path.Combine(root, "data", "species.json"));
+            b.ConfigureTestServices(services => services.AddSingleton<Greenhaus.Api.Infrastructure.IPulseClient>(Pulse));
         });
         _client = _factory.CreateClient();
         Contract = new OpenApiContract(Path.Combine(root, "contracts", "openapi", "greenhaus-api.yaml"));

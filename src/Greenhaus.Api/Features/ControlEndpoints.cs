@@ -16,11 +16,23 @@ public static class ControlEndpoints
     {
         api.MapGet("/pots/{potId:guid}/status", Status);
 
-        api.MapGet("/pots/{potId:guid}/devices", async (Guid potId, HttpContext http, GreenhausDbContext db, CancellationToken ct) =>
+        api.MapGet("/pots/{potId:guid}/devices", async (Guid potId, HttpContext http, GreenhausDbContext db, IPulseClient pulse, ILogger<PulseReadingSource> log, CancellationToken ct) =>
         {
             if (await db.OwnedPotAsync(potId, http.User.UserId(), ct) is null) return Problems.NotFound();
             var devices = await db.Devices.AsNoTracking().Where(d => d.PotId == potId).OrderBy(d => d.LinkedAt).ToListAsync(ct);
-            return Results.Ok(devices.Select(d => new LinkedDeviceDto { DeviceId = d.DeviceId, Model = d.Model, Status = "unknown", ThermalCutoffDeclared = d.ThermalCutoffDeclared }).ToList());
+            var result = await Task.WhenAll(devices.Select(async d =>
+            {
+                PulseDevice? live = null;
+                try { live = await pulse.GetDeviceAsync(d.DeviceId, ct); }
+                catch (PulseException e) { log.LogWarning("Could not read {Device} from Pulse: {Code}", d.DeviceId, e.Code); }
+                // A device Pulse cannot describe right now is shown offline, never as healthy.
+                return new LinkedDeviceDto
+                {
+                    DeviceId = d.DeviceId, Model = d.Model, Status = live?.Connection == "online" ? "online" : "offline",
+                    LastSeenAt = live?.LastSeenAt, Firmware = live?.Firmware, ThermalCutoffDeclared = d.ThermalCutoffDeclared,
+                };
+            }));
+            return Results.Ok(result.ToList());
         });
 
         api.MapGet("/pots/{potId:guid}/actuators", async (Guid potId, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, CancellationToken ct) =>
@@ -77,9 +89,11 @@ public static class ControlEndpoints
             if (pot.KillSwitch) return Problems.Fail(409, "kill_switch_on", "The kill switch is on", "Turn it off to run an actuator");
 
             var seconds = Math.Min(body.DurationSeconds.Value, actuator.MaxRunSeconds);
-            var commandId = await commands.RunAsync(actuator.DeviceId, actuator.Id, seconds, ct);
+            Guid commandId;
+            try { commandId = await commands.RunAsync(actuator.DeviceId, actuator.Id, seconds, ct); }
+            catch (PulseException e) { return PulseProblems.From(e); }
             actuator.LastRunAt = clock.GetUtcNow();
-            db.AddAudit(potId, "user", "run", $"{seconds} s requested by the user", actuator.Id, "sent", clock);
+            db.AddAudit(potId, "user", "run", $"{seconds} s requested by the user", actuator.Id, null, clock);
             await db.SaveChangesAsync(ct);
             return Results.Json(new CommandReceiptDto { CommandId = commandId, Status = "sent" }, statusCode: 202);
         });
@@ -104,7 +118,7 @@ public static class ControlEndpoints
             return Results.Ok(ToDto(actuator, pot, await entitlements.TierOfAsync(user, ct)));
         });
 
-        api.MapPut("/pots/{potId:guid}/kill-switch", async (Guid potId, KillSwitchUpdate body, HttpContext http, GreenhausDbContext db, TimeProvider clock, CancellationToken ct) =>
+        api.MapPut("/pots/{potId:guid}/kill-switch", async (Guid potId, KillSwitchUpdate body, HttpContext http, GreenhausDbContext db, DeviceSync sync, TimeProvider clock, CancellationToken ct) =>
         {
             var user = http.User.UserId();
             var pot = await db.OwnedPotAsync(potId, user, ct);
@@ -115,6 +129,7 @@ public static class ControlEndpoints
                 pot.KillSwitch = body.Enabled.Value;
                 db.AddAudit(potId, "user", "kill_switch", pot.KillSwitch ? "All automation stopped by the user" : "Automation resumed by the user", null, null, clock);
                 await db.SaveChangesAsync(ct);
+                await sync.SetKillSwitchAsync(potId, pot.KillSwitch, ct);
             }
             return Results.Ok(pot.ToDto());
         });
@@ -127,12 +142,14 @@ public static class ControlEndpoints
             return Results.Ok(entries.Select(a => a.ToDto()).ToList());
         });
 
-        api.MapPut("/pots/{potId:guid}/channels/{channelId}/calibration", async (Guid potId, string channelId, CalibrationDto body, HttpContext http, GreenhausDbContext db, TimeProvider clock, CancellationToken ct) =>
+        api.MapPut("/pots/{potId:guid}/channels/{channelId}/calibration", async (Guid potId, string channelId, CalibrationDto body, HttpContext http, GreenhausDbContext db, IPulseClient pulse, TimeProvider clock, CancellationToken ct) =>
         {
             if (await db.OwnedPotAsync(potId, http.User.UserId(), ct) is null) return Problems.NotFound();
             var channel = await db.Channels.FirstOrDefaultAsync(c => c.PotId == potId && c.ChannelId == channelId && c.Active, ct);
             if (channel is null) return Problems.NotFound("Unknown channel");
             if (body.DryRaw == body.WetRaw) return Problems.Invalid("Dry and wet raw values must differ");
+            try { await pulse.CalibrateAsync(channel.DeviceId, channel.ChannelId, body.DryRaw, body.WetRaw, ct); }
+            catch (PulseException e) { return PulseProblems.From(e); }
             channel.DryRaw = body.DryRaw;
             channel.WetRaw = body.WetRaw;
             channel.CalibratedAt = clock.GetUtcNow();
