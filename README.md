@@ -90,13 +90,26 @@ docker compose up --build   # http://localhost:8090/api/greenhaus/v1
 dotnet test mock-server/GreenhausMock.slnx   # checks every response against the contract
 ```
 
+## Run the real service
+
+`src/Greenhaus.Api` is the real implementation of the same contract: ASP.NET Core on PostgreSQL (EF Core), with the tier rules in `src/Greenhaus.Domain`. See [ADR 3](docs/adr/0003-api-service.md).
+
+```powershell
+docker compose --profile real up --build api   # http://localhost:8091/api/greenhaus/v1
+dotnet test tests/Greenhaus.Domain.Tests
+dotnet test tests/Greenhaus.Api.Tests          # real PostgreSQL through Testcontainers, every response checked against the contract
+```
+
+Locally the service runs with `Auth__Mode=Development`, which trusts an `X-User-Id` header. Production-style use validates Keycloak tokens (`Auth__Authority`, `Auth__Audience`). Linking controllers, live readings and the outbox relay arrive with the Pulse and RabbitMQ integration.
+
 ## Roadmap
+
 
 Done: contracts, the mock backend (Greenhaus, billing, Pulse), the design system and the product app, all contract-tested and covered by end-to-end tests.
 
 Waiting for the real services, which the app will use through the same contracts:
 
-- **Greenhaus API:** persistence, sign-in through Keycloak, tier enforcement, the outbox for `device.claimed.v1` and `limit.reached.v1`. The mock already shows how it must behave.
+- **Greenhaus API:** pots, plants, zones, requirements, tiers, controls and care run on PostgreSQL with sign-in through Keycloak. Still to come: the Pulse client (claims, readings, commands, alert rules) and the RabbitMQ relay and consumer for the outbox, `entitlement.changed.v1` and `device.claimed.v1`.
 - **Pulse:** live readings and commands over MQTT (the app polls every ten seconds today), and device allocation from order events.
 - **Docs-Brain:** an assistant panel scoped to a pot, with data access by tier.
 - **Orderflow:** Greenhaus kit products in its catalog (through its `Catalog:SeedFile`), and consuming `device.claimed.v1` to show an order as activated.

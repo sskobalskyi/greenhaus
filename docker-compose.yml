@@ -9,3 +9,37 @@ services:
     ports:
       - "8090:8080"
     restart: unless-stopped
+
+  postgres:
+    image: postgres:17-alpine
+    profiles: [real]
+    environment:
+      POSTGRES_USER: greenhaus
+      POSTGRES_PASSWORD: greenhaus
+      POSTGRES_DB: greenhaus
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U greenhaus"]
+      interval: 3s
+      retries: 20
+    volumes:
+      - greenhaus-db:/var/lib/postgresql/data
+
+  # The real service. `docker compose --profile real up --build api` serves the same contract as the mock on :8091.
+  # Auth__Mode=Development trusts the X-User-Id header, which is for this machine only. Use Keycloak otherwise.
+  api:
+    build:
+      context: .
+      dockerfile: src/Greenhaus.Api/Dockerfile
+    profiles: [real]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Greenhaus: Host=postgres;Database=greenhaus;Username=greenhaus;Password=greenhaus
+      Auth__Mode: Development
+    ports:
+      - "8091:8080"
+    restart: unless-stopped
+
+volumes:
+  greenhaus-db:
