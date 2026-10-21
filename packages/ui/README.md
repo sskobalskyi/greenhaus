@@ -33,6 +33,8 @@ Vite, React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix), lucide icons, i18
 | --- | --- |
 | `StatusChip` | All good, needs attention, sensor offline, no data. Shape and colour together |
 | `RequirementBand` | One reading against the pot's target range. A meter with an accessible value text |
+| `RequirementsEditor` | One set of targets per pot: a range slider per metric, a switch to stop measuring one (such as pH without a probe), and the plants' suggestion with a warning when they disagree. Changes stay a draft until saved |
+| `CalibrationForm` | Two raw readings, dry and wet, for one soil moisture sensor or all of them. Equal values are refused before anything is sent |
 | `PotCard` | A pot at a glance. With zones it names the worst zone and shows its readings |
 | `PotZoneMap` | A heatmap of one metric across the zones of a pot or bed, with a metric picker |
 | `ActuatorControl` | Mode (`Off`, `Notify only`, `Auto`), manual run and safety limits. Auto is locked by tier and says which tier unlocks it |
