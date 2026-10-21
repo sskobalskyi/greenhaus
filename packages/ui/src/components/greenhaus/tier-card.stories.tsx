@@ -45,3 +45,13 @@ export const UkrainianDark: Story = {
   globals: { locale: 'uk', theme: 'dark' },
   args: { tier: 'druid', limits: limits.druid, price: { amount: 7, currency: 'USD' }, current: true },
 }
+
+/** Before the billing service answers there is no price. A paid tier is never shown as Free. */
+export const PriceUnknown: Story = {
+  args: { tier: 'gardener', limits: limits.gardener },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Price shown at checkout')).toBeVisible()
+    await expect(canvas.queryByText('Free')).toBeNull()
+  },
+}

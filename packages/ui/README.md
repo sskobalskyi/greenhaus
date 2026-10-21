@@ -9,17 +9,16 @@ The vibe is deliberately not an enterprise dashboard: warm paper, leaf greens an
 ## Run
 
 ```powershell
-cd packages/ui
-npm install
-npm run storybook          # http://localhost:6006
-docker compose up mock     # from the repository root, serves the live-data stories
+npm install                                  # at the repository root, installs the workspace
+npm run storybook -w @greenhaus/ui           # http://localhost:6006
+docker compose up mock                       # from the repository root, serves the live-data stories
 ```
 
 | Script | What it does |
 | --- | --- |
-| `npm run storybook` | Storybook with a language switch (English, Ukrainian), a theme switch (light, dark) and the accessibility panel |
-| `npm test` | Runs every story in a real browser (Playwright). Interaction tests (`play` functions) and the accessibility check both run, and a violation fails the test |
-| `npm run typecheck`, `npm run lint` | TypeScript and oxlint |
+| `npm run storybook -w @greenhaus/ui` | Storybook with a language switch (English, Ukrainian), a theme switch (light, dark) and the accessibility panel |
+| `npm test -w @greenhaus/ui` | Runs every story in a real browser (Playwright). Interaction tests (`play` functions) and the accessibility check both run, and a violation fails the test |
+| `npm run typecheck -w @greenhaus/ui`, `npm run lint -w @greenhaus/ui` | TypeScript and oxlint |
 | `npm run api:types` | Regenerates `src/api/schema.d.ts` from `contracts/openapi/greenhaus-api.yaml` |
 | `npm run build-storybook` | Static Storybook in `storybook-static/` |
 | `npm run screenshots` | Captures the key stories in light English and dark Ukrainian into `docs/screenshots/ui/` |
@@ -42,6 +41,8 @@ Vite, React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix), lucide icons, i18
 | `LanguageSwitcher`, `ThemeToggle` | Language and theme |
 
 Base components in `src/components/ui/` come from shadcn and are owned by this repository.
+
+The app in `apps/web` consumes this package from source, see [ADR 0002](../../docs/adr/0002-web-workspace-and-design-system-from-source.md).
 
 ## Design decisions
 

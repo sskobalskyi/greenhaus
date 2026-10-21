@@ -13,7 +13,7 @@ export interface PotZoneMapProps {
   zones: Schemas['Zone'][]
   status: Schemas['PotStatus']
   requirements: Schemas['Requirements']
-  /** The metric shown first. Defaults to the first metric that any zone reports. */
+  /** The metric shown first. Defaults to the one that needs attention in the worst zone. */
   initialMetric?: Metric
   className?: string
 }
@@ -29,7 +29,9 @@ const cellLook: Record<ReadingState, string> = {
 export function PotZoneMap({ rows, cols, zones, status, requirements, initialMetric, className }: PotZoneMapProps) {
   const { t, i18n } = useTranslation()
   const available = metrics.filter((m) => status.zones.some((z) => z.metrics.some((r) => r.metric === m)))
-  const [metric, setMetric] = useState<Metric>(initialMetric ?? available[0] ?? 'soil_moisture')
+  // Open on the metric that needs attention in the worst zone, so the problem is the first thing you see.
+  const problem = status.zones.find((z) => z.zoneId === status.worstZoneId)?.metrics.find((r) => r.state === 'attention')?.metric
+  const [metric, setMetric] = useState<Metric>(initialMetric ?? problem ?? available[0] ?? 'soil_moisture')
   const worst = zones.find((z) => z.id === status.worstZoneId)
   const nameOf = (zone: Schemas['Zone']) => zoneName(t, zone, { simple: false, cols })
 
@@ -83,7 +85,7 @@ export function PotZoneMap({ rows, cols, zones, status, requirements, initialMet
                 {reading?.direction === 'below' && <ArrowDown className="size-4 text-attention-ink" aria-hidden />}
               </span>
               {target?.min !== undefined && target.max !== undefined && (
-                <span className="text-xs text-foreground">{t('band.target', { min: target.min, max: target.max })}</span>
+                <span className="text-xs text-foreground">{t('band.target', { min: formatValue(metric, target.min, i18n.language), max: formatValue(metric, target.max, i18n.language) })}</span>
               )}
             </li>
           )

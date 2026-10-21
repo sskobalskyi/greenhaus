@@ -79,6 +79,7 @@
       "druid": "Keeps a whole grove in balance"
     },
     "free": "Free",
+    "priceUnknown": "Price shown at checkout",
     "perMonth": "{{price}} per month",
     "current": "Your plan",
     "choose": "Choose {{tier}}",

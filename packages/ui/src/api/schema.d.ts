@@ -42,6 +42,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/tiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What every tier includes
+         * @description Public, so the limits of all tiers are visible before sign-up and the plans page can compare
+         *     them. Prices belong to the billing service (`GET /plans`).
+         */
+        get: operations["listTiers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/species": {
         parameters: {
             query?: never;
@@ -612,6 +633,10 @@ export interface components {
             zoneGridMax: number;
             automation: components["schemas"]["AutomationLevel"][];
         };
+        TierLimits: {
+            tier: components["schemas"]["Tier"];
+            limits: components["schemas"]["Limits"];
+        };
         Usage: {
             pots: number;
             aiQuestionsThisMonth: number;
@@ -1043,6 +1068,26 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+        };
+    };
+    listTiers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One entry per tier, from the free tier up */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TierLimits"][];
+                };
+            };
         };
     };
     listSpecies: {
