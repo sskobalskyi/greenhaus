@@ -1,0 +1,995 @@
+{
+    "note":  "Indicative ranges compiled from general horticultural guidance. Units: temperature in degrees C, humidity and soil moisture in percent, light in lux, airflow as a level from 0 to 3. Not agronomic advice; to be reviewed and refined.",
+    "species":  [
+                    {
+                        "id":  "monstera",
+                        "commonName":  "Monstera",
+                        "scientificName":  "Monstera deliciosa",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  40,
+                                                                "max":  60
+                                                            },
+                                          "ph":  {
+                                                     "min":  5.5,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  8000,
+                                                        "max":  20000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  28
+                    },
+                    {
+                        "id":  "pothos",
+                        "commonName":  "Pothos",
+                        "scientificName":  "Epipremnum aureum",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  35,
+                                                                "max":  55
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  3000,
+                                                        "max":  15000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  30
+                    },
+                    {
+                        "id":  "snake-plant",
+                        "commonName":  "Snake plant",
+                        "scientificName":  "Dracaena trifasciata",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  32
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  30,
+                                                               "max":  50
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  15,
+                                                                "max":  35
+                                                            },
+                                          "ph":  {
+                                                     "min":  5.5,
+                                                     "max":  7.5
+                                                 },
+                                          "light":  {
+                                                        "min":  2000,
+                                                        "max":  20000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  56
+                    },
+                    {
+                        "id":  "zz-plant",
+                        "commonName":  "ZZ plant",
+                        "scientificName":  "Zamioculcas zamiifolia",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  30,
+                                                               "max":  50
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  15,
+                                                                "max":  35
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  1000,
+                                                        "max":  15000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  56
+                    },
+                    {
+                        "id":  "spider-plant",
+                        "commonName":  "Spider plant",
+                        "scientificName":  "Chlorophytum comosum",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  13,
+                                                              "max":  27
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  35,
+                                                                "max":  55
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7.2
+                                                 },
+                                          "light":  {
+                                                        "min":  5000,
+                                                        "max":  15000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  30
+                    },
+                    {
+                        "id":  "peace-lily",
+                        "commonName":  "Peace lily",
+                        "scientificName":  "Spathiphyllum wallisii",
+                        "category":  "flowering",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  50,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  45,
+                                                                "max":  65
+                                                            },
+                                          "ph":  {
+                                                     "min":  5.8,
+                                                     "max":  6.5
+                                                 },
+                                          "light":  {
+                                                        "min":  2000,
+                                                        "max":  10000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  42
+                    },
+                    {
+                        "id":  "fiddle-leaf-fig",
+                        "commonName":  "Fiddle-leaf fig",
+                        "scientificName":  "Ficus lyrata",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  16,
+                                                              "max":  29
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  65
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  35,
+                                                                "max":  55
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  10000,
+                                                        "max":  25000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  28
+                    },
+                    {
+                        "id":  "rubber-plant",
+                        "commonName":  "Rubber plant",
+                        "scientificName":  "Ficus elastica",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  29
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  30,
+                                                                "max":  50
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  5000,
+                                                        "max":  20000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  35
+                    },
+                    {
+                        "id":  "aloe-vera",
+                        "commonName":  "Aloe vera",
+                        "scientificName":  "Aloe vera",
+                        "category":  "succulent",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  13,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  25,
+                                                               "max":  50
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  10,
+                                                                "max":  30
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7.5
+                                                 },
+                                          "light":  {
+                                                        "min":  15000,
+                                                        "max":  40000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  90
+                    },
+                    {
+                        "id":  "jade-plant",
+                        "commonName":  "Jade plant",
+                        "scientificName":  "Crassula ovata",
+                        "category":  "succulent",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  10,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  30,
+                                                               "max":  50
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  10,
+                                                                "max":  30
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  15000,
+                                                        "max":  40000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  90
+                    },
+                    {
+                        "id":  "echeveria",
+                        "commonName":  "Echeveria",
+                        "scientificName":  "Echeveria elegans",
+                        "category":  "succulent",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  10,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  25,
+                                                               "max":  45
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  10,
+                                                                "max":  25
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  20000,
+                                                        "max":  50000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  90
+                    },
+                    {
+                        "id":  "cactus",
+                        "commonName":  "Cactus (general)",
+                        "scientificName":  "Cactaceae",
+                        "category":  "succulent",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  10,
+                                                              "max":  35
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  20,
+                                                               "max":  40
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  5,
+                                                                "max":  20
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  25000,
+                                                        "max":  60000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  90
+                    },
+                    {
+                        "id":  "basil",
+                        "commonName":  "Basil",
+                        "scientificName":  "Ocimum basilicum",
+                        "category":  "herb",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  45,
+                                                                "max":  65
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  20000,
+                                                        "max":  50000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "mint",
+                        "commonName":  "Mint",
+                        "scientificName":  "Mentha spicata",
+                        "category":  "herb",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  27
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  55,
+                                                                "max":  75
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  10000,
+                                                        "max":  30000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  21
+                    },
+                    {
+                        "id":  "parsley",
+                        "commonName":  "Parsley",
+                        "scientificName":  "Petroselinum crispum",
+                        "category":  "herb",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  10,
+                                                              "max":  25
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  50,
+                                                                "max":  70
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  10000,
+                                                        "max":  30000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  21
+                    },
+                    {
+                        "id":  "cilantro",
+                        "commonName":  "Cilantro",
+                        "scientificName":  "Coriandrum sativum",
+                        "category":  "herb",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  10,
+                                                              "max":  24
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  50,
+                                                                "max":  70
+                                                            },
+                                          "ph":  {
+                                                     "min":  6.2,
+                                                     "max":  6.8
+                                                 },
+                                          "light":  {
+                                                        "min":  10000,
+                                                        "max":  30000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  21
+                    },
+                    {
+                        "id":  "thyme",
+                        "commonName":  "Thyme",
+                        "scientificName":  "Thymus vulgaris",
+                        "category":  "herb",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  30,
+                                                               "max":  50
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  25,
+                                                                "max":  45
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  8
+                                                 },
+                                          "light":  {
+                                                        "min":  20000,
+                                                        "max":  50000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  45
+                    },
+                    {
+                        "id":  "rosemary",
+                        "commonName":  "Rosemary",
+                        "scientificName":  "Salvia rosmarinus",
+                        "category":  "herb",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  30,
+                                                               "max":  50
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  25,
+                                                                "max":  45
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7.5
+                                                 },
+                                          "light":  {
+                                                        "min":  25000,
+                                                        "max":  60000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  2,
+                                                          "max":  3
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  45
+                    },
+                    {
+                        "id":  "tomato",
+                        "commonName":  "Tomato",
+                        "scientificName":  "Solanum lycopersicum",
+                        "category":  "vegetable",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  50,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  50,
+                                                                "max":  70
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  6.8
+                                                 },
+                                          "light":  {
+                                                        "min":  30000,
+                                                        "max":  80000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  2,
+                                                          "max":  3
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "pepper",
+                        "commonName":  "Pepper",
+                        "scientificName":  "Capsicum annuum",
+                        "category":  "vegetable",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  20,
+                                                              "max":  32
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  50,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  50,
+                                                                "max":  65
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  6.8
+                                                 },
+                                          "light":  {
+                                                        "min":  30000,
+                                                        "max":  80000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  2,
+                                                          "max":  3
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "lettuce",
+                        "commonName":  "Lettuce",
+                        "scientificName":  "Lactuca sativa",
+                        "category":  "vegetable",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  10,
+                                                              "max":  24
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  50,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  55,
+                                                                "max":  75
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  10000,
+                                                        "max":  30000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "strawberry",
+                        "commonName":  "Strawberry",
+                        "scientificName":  "Fragaria x ananassa",
+                        "category":  "vegetable",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  26
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  50,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  55,
+                                                                "max":  70
+                                                            },
+                                          "ph":  {
+                                                     "min":  5.5,
+                                                     "max":  6.5
+                                                 },
+                                          "light":  {
+                                                        "min":  25000,
+                                                        "max":  60000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "cucumber",
+                        "commonName":  "Cucumber",
+                        "scientificName":  "Cucumis sativus",
+                        "category":  "vegetable",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  60,
+                                                               "max":  80
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  60,
+                                                                "max":  75
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  30000,
+                                                        "max":  80000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  2,
+                                                          "max":  3
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "phalaenopsis",
+                        "commonName":  "Moth orchid",
+                        "scientificName":  "Phalaenopsis",
+                        "category":  "flowering",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  50,
+                                                               "max":  75
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  30,
+                                                                "max":  50
+                                                            },
+                                          "ph":  {
+                                                     "min":  5.5,
+                                                     "max":  6.5
+                                                 },
+                                          "light":  {
+                                                        "min":  5000,
+                                                        "max":  15000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "african-violet",
+                        "commonName":  "African violet",
+                        "scientificName":  "Saintpaulia ionantha",
+                        "category":  "flowering",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  27
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  50,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  45,
+                                                                "max":  60
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  5000,
+                                                        "max":  12000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  1
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  14
+                    },
+                    {
+                        "id":  "boston-fern",
+                        "commonName":  "Boston fern",
+                        "scientificName":  "Nephrolepis exaltata",
+                        "category":  "fern",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  16,
+                                                              "max":  27
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  60,
+                                                               "max":  80
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  55,
+                                                                "max":  75
+                                                            },
+                                          "ph":  {
+                                                     "min":  5,
+                                                     "max":  6.5
+                                                 },
+                                          "light":  {
+                                                        "min":  3000,
+                                                        "max":  10000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  1
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  28
+                    },
+                    {
+                        "id":  "calathea",
+                        "commonName":  "Calathea",
+                        "scientificName":  "Calathea orbifolia",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  18,
+                                                              "max":  27
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  55,
+                                                               "max":  75
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  50,
+                                                                "max":  70
+                                                            },
+                                          "ph":  {
+                                                     "min":  5.5,
+                                                     "max":  6.5
+                                                 },
+                                          "light":  {
+                                                        "min":  3000,
+                                                        "max":  10000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  1
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  28
+                    },
+                    {
+                        "id":  "heartleaf-philodendron",
+                        "commonName":  "Heartleaf philodendron",
+                        "scientificName":  "Philodendron hederaceum",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  16,
+                                                              "max":  30
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  70
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  35,
+                                                                "max":  55
+                                                            },
+                                          "ph":  {
+                                                     "min":  5.5,
+                                                     "max":  7
+                                                 },
+                                          "light":  {
+                                                        "min":  3000,
+                                                        "max":  15000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  30
+                    },
+                    {
+                        "id":  "dracaena",
+                        "commonName":  "Corn plant",
+                        "scientificName":  "Dracaena fragrans",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  16,
+                                                              "max":  29
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  30,
+                                                                "max":  50
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  6.5
+                                                 },
+                                          "light":  {
+                                                        "min":  3000,
+                                                        "max":  15000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  35
+                    },
+                    {
+                        "id":  "peperomia",
+                        "commonName":  "Peperomia",
+                        "scientificName":  "Peperomia obtusifolia",
+                        "category":  "foliage",
+                        "preferred":  {
+                                          "temperature":  {
+                                                              "min":  15,
+                                                              "max":  28
+                                                          },
+                                          "air_humidity":  {
+                                                               "min":  40,
+                                                               "max":  60
+                                                           },
+                                          "soil_moisture":  {
+                                                                "min":  30,
+                                                                "max":  50
+                                                            },
+                                          "ph":  {
+                                                     "min":  6,
+                                                     "max":  6.5
+                                                 },
+                                          "light":  {
+                                                        "min":  3000,
+                                                        "max":  12000
+                                                    },
+                                          "airflow":  {
+                                                          "min":  1,
+                                                          "max":  2
+                                                      }
+                                      },
+                        "fertilizerIntervalDays":  35
+                    }
+                ]
+}
