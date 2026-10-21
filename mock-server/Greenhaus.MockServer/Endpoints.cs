@@ -58,6 +58,11 @@ public static class Endpoints
             lock (s.Sync) return Results.Ok(s.EntitlementsFor(TierOf(ctx, s), ctx.Request.Headers["X-Mock-Scenario"].FirstOrDefault()));
         });
 
+        api.MapGet("/tiers", () =>
+            Results.Ok(new[] { Tier.Novice, Tier.Gardener, Tier.Druid }
+                .Select(tier => new TierLimits { Tier = tier, Limits = MockStore.LimitsFor(tier) })
+                .ToList()));
+
         // ---- species ---------------------------------------------------------------------------------
         api.MapGet("/species", (string? query, MockStore s) =>
             Results.Ok(string.IsNullOrWhiteSpace(query)

@@ -18,6 +18,7 @@ public class ContractTests
         Assert.Equal(HttpStatusCode.OK, (await api.Call("GET", "/me")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await api.Call("PATCH", "/me", body: new { displayName = "Fern", locale = "uk" })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await api.Call("GET", "/me/entitlements")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await api.Call("GET", "/tiers")).StatusCode);
 
         // species
         Assert.Equal(HttpStatusCode.OK, (await api.Call("GET", "/species", query: "query=basil")).StatusCode);

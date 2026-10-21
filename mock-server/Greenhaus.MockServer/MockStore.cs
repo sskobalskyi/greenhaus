@@ -67,6 +67,19 @@ public class MockStore
         Seed();
     }
 
+    /// <summary>Puts the mock back to its seeded state. Used by end-to-end tests, it is not part of the contract.</summary>
+    public void Reset()
+    {
+        lock (Sync)
+        {
+            Pots.Clear();
+            Devices.Clear();
+            User.DisplayName = "Demo Gardener";
+            User.Locale = "en";
+            Seed();
+        }
+    }
+
     // ---- tiers -------------------------------------------------------------------------------------
 
     public static Limits LimitsFor(Tier tier)
