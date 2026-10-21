@@ -10,9 +10,8 @@ public interface IReadingSource
     Task<IReadOnlyList<ChannelReading>> LatestAsync(IReadOnlyCollection<ChannelEntity> channels, CancellationToken ct);
 }
 
-/// <summary>Used until a Pulse client is configured: nothing has been measured.</summary>
-public sealed class NoReadings : IReadingSource
+/// <summary>Sends a run command to a controller. Pulse in production.</summary>
+public interface ICommandSender
 {
-    public Task<IReadOnlyList<ChannelReading>> LatestAsync(IReadOnlyCollection<ChannelEntity> channels, CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<ChannelReading>>([]);
+    Task<Guid> RunAsync(string deviceId, string actuatorId, int seconds, CancellationToken ct);
 }

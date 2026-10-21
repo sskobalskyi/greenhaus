@@ -17,7 +17,7 @@ public static class RequirementEndpoints
             return Results.Ok((await db.Requirements.AsNoTracking().Where(r => r.PotId == potId).ToListAsync(ct)).ToDto());
         });
 
-        api.MapPut("/pots/{potId:guid}/requirements", async (Guid potId, RequirementsDto body, HttpContext http, GreenhausDbContext db, CancellationToken ct) =>
+        api.MapPut("/pots/{potId:guid}/requirements", async (Guid potId, RequirementsDto body, HttpContext http, GreenhausDbContext db, DeviceSync sync, CancellationToken ct) =>
         {
             if (await db.OwnedPotAsync(potId, http.User.UserId(), ct) is null) return Problems.NotFound();
             var drafts = body.Metrics.Select(m => new RequirementDraft(m.Metric, m.Enabled, m.Min, m.Max, m.Margin)).ToList();
@@ -33,6 +33,7 @@ public static class RequirementEndpoints
                 row.Enabled = draft.Enabled; row.Min = draft.Min; row.Max = draft.Max; row.Margin = draft.Margin;
             }
             await db.SaveChangesAsync(ct);
+            await sync.SyncRulesAsync(potId, ct);
             return Results.Ok((await db.Requirements.AsNoTracking().Where(r => r.PotId == potId).ToListAsync(ct)).ToDto());
         });
 

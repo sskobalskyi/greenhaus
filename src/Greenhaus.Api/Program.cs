@@ -60,8 +60,20 @@ public partial class Program
         builder.Services.AddSingleton(_ => SpeciesCatalog.Load(configuration["Species:Path"] ?? "data/species.json"));
         builder.Services.AddScoped<EntitlementService>();
         builder.Services.AddScoped<EventPublisher>();
-        builder.Services.AddSingleton<IReadingSource, NoReadings>();
-        builder.Services.AddSingleton<ICommandSender, NoCommands>();
+        builder.Services.Configure<PulseOptions>(configuration.GetSection("Pulse"));
+        builder.Services.AddClaimRateLimit();
+        builder.Services.AddScoped<DeviceSync>();
+        builder.Services.AddSingleton<PulseTokens>();
+        builder.Services.AddTransient<PulseTokenHandler>();
+        builder.Services.AddHttpClient("pulse-token");
+        builder.Services.AddHttpClient<IPulseClient, HttpPulseClient>(client =>
+            {
+                var baseUrl = configuration["Pulse:BaseUrl"] ?? "http://pulse.invalid/";
+                client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+            })
+            .AddHttpMessageHandler<PulseTokenHandler>();
+        builder.Services.AddScoped<IReadingSource, PulseReadingSource>();
+        builder.Services.AddScoped<ICommandSender, PulseCommandSender>();
         builder.Services.AddProblemDetails();
         builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 
@@ -86,6 +98,7 @@ public partial class Program
             app.Logger.LogWarning("Auth:Mode is Development. Callers are trusted by the X-User-Id header. Never use this outside a local machine.");
 
         app.UseAuthentication();
+        app.UseRateLimiter();
         app.UseAuthorization();
         app.MapHealthChecks("/health").AllowAnonymous();
 
@@ -95,6 +108,7 @@ public partial class Program
         api.MapRequirements();
         api.MapControls();
         api.MapCare();
+        api.MapClaims();
 
         return app;
     }

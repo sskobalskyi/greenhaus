@@ -100,7 +100,7 @@ dotnet test tests/Greenhaus.Domain.Tests
 dotnet test tests/Greenhaus.Api.Tests          # real PostgreSQL through Testcontainers, every response checked against the contract
 ```
 
-Locally the service runs with `Auth__Mode=Development`, which trusts an `X-User-Id` header. Production-style use validates Keycloak tokens (`Auth__Authority`, `Auth__Audience`). Linking controllers, live readings and the outbox relay arrive with the Pulse and RabbitMQ integration.
+Locally the service runs with `Auth__Mode=Development`, which trusts an `X-User-Id` header. Production-style use validates Keycloak tokens (`Auth__Authority`, `Auth__Audience`). Controllers are linked, read and commanded through Pulse's device API (`Pulse__BaseUrl`, with a client-credentials token or `Pulse__StaticToken` for local runs). Claiming a controller creates its sensors and actuators, tightens defaults inside the controller's hard limits, and syncs alert rules to Pulse whenever requirements change. The outbox relay arrives with the RabbitMQ integration.
 
 ## Roadmap
 
@@ -109,7 +109,7 @@ Done: contracts, the mock backend (Greenhaus, billing, Pulse), the design system
 
 Waiting for the real services, which the app will use through the same contracts:
 
-- **Greenhaus API:** pots, plants, zones, requirements, tiers, controls and care run on PostgreSQL with sign-in through Keycloak. Still to come: the Pulse client (claims, readings, commands, alert rules) and the RabbitMQ relay and consumer for the outbox, `entitlement.changed.v1` and `device.claimed.v1`.
+- **Greenhaus API:** pots, plants, zones, requirements, tiers, controls and care run on PostgreSQL with sign-in through Keycloak. Still to come: the RabbitMQ relay and consumer for the outbox, `entitlement.changed.v1` and `device.claimed.v1`.
 - **Pulse:** live readings and commands over MQTT (the app polls every ten seconds today), and device allocation from order events.
 - **Docs-Brain:** an assistant panel scoped to a pot, with data access by tier.
 - **Orderflow:** Greenhaus kit products in its catalog (through its `Catalog:SeedFile`), and consuming `device.claimed.v1` to show an order as activated.

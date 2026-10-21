@@ -142,7 +142,7 @@ public static class PotEndpoints
         });
     }
 
-    private static async Task<IResult> SetViewMode(Guid potId, ViewModeUpdate body, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, EventPublisher events, CancellationToken ct)
+    private static async Task<IResult> SetViewMode(Guid potId, ViewModeUpdate body, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, EventPublisher events, DeviceSync sync, CancellationToken ct)
     {
         var user = http.User.UserId();
         var pot = await db.Pots.Include(p => p.Zones).Include(p => p.Channels).Include(p => p.Plants)
@@ -183,6 +183,7 @@ public static class PotEndpoints
             pot.GridRows = rows;
             pot.GridCols = cols;
             await db.SaveChangesAsync(ct);
+            await sync.SyncRulesAsync(potId, ct);
             return Results.Ok(pot.ToDto());
         }
 
@@ -205,6 +206,7 @@ public static class PotEndpoints
         pot.GridRows = null;
         pot.GridCols = null;
         await db.SaveChangesAsync(ct);
+        await sync.SyncRulesAsync(potId, ct);
         return Results.Ok(pot.ToDto());
     }
 }

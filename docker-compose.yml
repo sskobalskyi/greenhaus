@@ -37,6 +37,9 @@ services:
     environment:
       ConnectionStrings__Greenhaus: Host=postgres;Database=greenhaus;Username=greenhaus;Password=greenhaus
       Auth__Mode: Development
+      # The device platform. Point it at a running Pulse, with a service token (role pulse-service).
+      Pulse__BaseUrl: ${PULSE_URL:-http://host.docker.internal:5080/api/pulse/v2}
+      Pulse__StaticToken: ${PULSE_TOKEN:-}
     ports:
       - "8091:8080"
     restart: unless-stopped
