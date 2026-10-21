@@ -1,12 +1,11 @@
 using System.Globalization;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Json.Schema;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
-namespace Greenhaus.MockServer.Tests;
+namespace Greenhaus.ContractTesting;
 
 /// <summary>
 /// Loads an OpenAPI 3.1 document and checks real HTTP responses against it: the status code must be one
@@ -171,9 +170,4 @@ public sealed class OpenApiContract
         if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) return JsonValue.Create(number);
         return JsonValue.Create(value);
     }
-}
-
-public static class HttpExtensions
-{
-    public static Task<T?> Json<T>(this HttpResponseMessage response) => response.Content.ReadFromJsonAsync<T>();
 }

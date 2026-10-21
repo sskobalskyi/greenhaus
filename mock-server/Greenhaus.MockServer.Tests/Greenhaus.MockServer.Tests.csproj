@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Greenhaus.MockServer\Greenhaus.MockServer.csproj" />
+    <ProjectReference Include="..\..\tests\Greenhaus.ContractTesting\Greenhaus.ContractTesting.csproj" />
   </ItemGroup>
 
   <ItemGroup>
