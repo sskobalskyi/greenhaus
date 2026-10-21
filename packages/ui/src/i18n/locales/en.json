@@ -38,6 +38,29 @@
     "killSwitch": "Kill switch on",
     "noReadings": "Waiting for the first readings"
   },
+  "editor": {
+    "title": "Targets",
+    "useSuggestion": "Use the suggestion from the plants",
+    "conflicts": "The plants disagree about: {{metrics}}. The suggestion keeps the first plant's range for these, so check them.",
+    "conflict": "The plants disagree",
+    "measure": "Measure {{metric}}",
+    "minimum": "{{metric}}, minimum",
+    "maximum": "{{metric}}, maximum",
+    "off": "Not measured",
+    "save": "Save changes",
+    "reset": "Discard changes"
+  },
+  "calibration": {
+    "title": "Calibrate a soil moisture sensor",
+    "intro": "A sensor reports a raw number that depends on the sensor and the soil. Two readings tell Greenhaus what dry and wet mean for yours.",
+    "dry": "Raw value with the sensor dry, in the air",
+    "wet": "Raw value with the sensor wet, in water",
+    "dryHint": "For example 3100",
+    "wetHint": "For example 1300",
+    "differ": "The two values must differ.",
+    "all": "Use these values for all {{count}} soil moisture sensors",
+    "save": "Save calibration"
+  },
   "zone": {
     "default": "Zone {{n}}",
     "whole": "Whole pot"

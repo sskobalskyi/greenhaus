@@ -61,8 +61,15 @@
     "requirements": {
       "title": "What this pot needs",
       "intro": "One set of targets for the whole pot. Sensors are compared with it zone by zone.",
-      "disabled": "Not measured",
-      "suggestion": "Suggested from the plants"
+      "saved": "Saved. Alert rules follow the new targets.",
+      "failed": "The targets could not be saved. Check that every minimum is below its maximum."
+    },
+    "rename": { "title": "Rename this pot", "action": "Rename", "name": "New name" },
+    "delete": {
+      "action": "Delete",
+      "title": "Delete {{name}}?",
+      "body": "The pot, its plants, its requirements and its care tasks are removed. Linked controllers stay yours and can be added to another pot.",
+      "confirm": "Delete this pot"
     },
     "controls": {
       "title": "Controls",
@@ -76,9 +83,23 @@
       "actor": { "automation": "Automation", "user": "You", "safety": "Safety" },
       "noActuators": "No actuators are connected to this pot.",
       "modeFailed": "The mode could not be changed",
+      "calibrateTitle": "Calibrate before automating",
+      "calibrateBody": "Automatic watering needs to know what dry and wet mean for your sensors.",
+      "calibrate": "Calibrate sensors",
+      "calibrated": "The sensors are calibrated. You can switch to Auto now.",
       "ranFor": "Started for {{seconds}} seconds"
     },
-    "care": { "title": "Care tasks", "empty": "No tasks right now.", "open": "To do", "done": "Done" },
+    "care": {
+      "title": "Care tasks",
+      "empty": "No tasks right now.",
+      "open": "To do",
+      "done": "Done",
+      "new": "Add a task",
+      "taskTitle": "What needs doing",
+      "due": "Due date",
+      "repeat": "Repeat every (days, optional)",
+      "add": "Add task"
+    },
     "devices": {
       "title": "Linked controllers",
       "empty": "No controller is linked yet. Scan the QR code on the box to add one.",

@@ -60,6 +60,16 @@ for (const look of looks) {
     await page.screenshot({ path: path.join(out, `controls-${look.name}.png`), fullPage: true })
   })
 
+  test(`requirements ${look.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 900 })
+    await open(page, '/', look)
+    await page.locator('a', { hasText: 'Window sill' }).click()
+    await page.locator('[role="tab"]').nth(2).click()
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: path.join(out, `requirements-${look.name}.png`), fullPage: true })
+  })
+
   test(`plans ${look.name}`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await open(page, '/plans', look, null)

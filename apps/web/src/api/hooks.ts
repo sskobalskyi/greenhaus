@@ -159,3 +159,49 @@ export function useCancelSubscription() {
     onSuccess: refresh,
   })
 }
+
+export function useSetRequirements(potId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: S['Requirements']) => api<S['Requirements']>(`/pots/${potId}/requirements`, { method: 'PUT', json: body }),
+    onSuccess: () => Promise.all([invalidate('requirements', potId), invalidate('status', potId), invalidate('suggestion', potId)]),
+  })
+}
+
+/** Calibrates one or more sensor channels with the same two raw values, one after the other. */
+export function useCalibrate(potId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: async (v: { channelIds: string[]; dryRaw: number; wetRaw: number }) => {
+      for (const channelId of v.channelIds) {
+        await api<S['Calibration']>(`/pots/${potId}/channels/${channelId}/calibration`, { method: 'PUT', json: { dryRaw: v.dryRaw, wetRaw: v.wetRaw } })
+      }
+    },
+    onSuccess: () => Promise.all([invalidate('actuators', potId), invalidate('status', potId)]),
+  })
+}
+
+export function useCreateTask(potId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: { title: string; dueAt: string; repeatEveryDays?: number | null }) =>
+      api<S['CareTask']>(`/pots/${potId}/care-tasks`, { method: 'POST', json: body }),
+    onSuccess: () => invalidate('care', potId),
+  })
+}
+
+export function useUpdatePot(potId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (body: { name?: string; location?: string }) => api<S['Pot']>(`/pots/${potId}`, { method: 'PATCH', json: body }),
+    onSuccess: () => Promise.all([invalidate('pot', potId), invalidate('pots')]),
+  })
+}
+
+export function useDeletePot(potId: string) {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: () => api<void>(`/pots/${potId}`, { method: 'DELETE' }),
+    onSuccess: () => Promise.all([invalidate('pots'), invalidate('entitlements')]),
+  })
+}
