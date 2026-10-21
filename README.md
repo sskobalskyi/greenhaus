@@ -66,7 +66,7 @@ React app for pots, plants, controls, plans and the QR claim flow, in English an
 npm install                    # installs the web workspace
 docker compose up -d mock      # the mock backend on :8090
 npm run dev -w @greenhaus/web  # http://localhost:5174
-npm run e2e -w @greenhaus/web  # 30 end-to-end tests with an accessibility scan of every page
+npm run e2e -w @greenhaus/web  # 38 end-to-end tests with an accessibility scan of every page
 ```
 
 See [apps/web](apps/web/README.md) and [ADR 0002](docs/adr/0002-web-workspace-and-design-system-from-source.md).
@@ -90,6 +90,17 @@ docker compose up --build   # http://localhost:8090/api/greenhaus/v1
 dotnet test mock-server/GreenhausMock.slnx   # checks every response against the contract
 ```
 
+## Roadmap
+
+Done: contracts, the mock backend (Greenhaus, billing, Pulse), the design system and the product app, all contract-tested and covered by end-to-end tests.
+
+Waiting for the real services, which the app will use through the same contracts:
+
+- **Greenhaus API:** persistence, sign-in through Keycloak, tier enforcement, the outbox for `device.claimed.v1` and `limit.reached.v1`. The mock already shows how it must behave.
+- **Pulse:** live readings and commands over MQTT (the app polls every ten seconds today), and device allocation from order events.
+- **Docs-Brain:** an assistant panel scoped to a pot, with data access by tier.
+- **Orderflow:** Greenhaus kit products in its catalog (through its `Catalog:SeedFile`), and consuming `device.claimed.v1` to show an order as activated.
+- **Later:** achievements (last, by decision), the real billing service, an ESP32 sketch for the same MQTT topics.
 ## Licence
 
 MIT, see [LICENSE](LICENSE).
