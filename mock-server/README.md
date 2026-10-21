@@ -39,6 +39,8 @@ Seeded data:
 
 Devices to claim: `ghx-demo-0001` with token `demo-token` (claimable), `ghx-demo-0002` with `demo-token-2` (not shipped), `ghx-demo-0003` with `expired-token` (expired).
 
+For end-to-end tests the mock also has `POST /mock/reset`, which reseeds its in-memory state. It is a test aid and not part of the contract.
+
 ## Contract tests
 
 ```powershell

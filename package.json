@@ -1,0 +1,6 @@
+{
+  "name": "greenhaus",
+  "private": true,
+  "description": "Greenhaus web workspace: the design system and the product app",
+  "workspaces": ["packages/*", "apps/*"]
+}

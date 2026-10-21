@@ -28,7 +28,7 @@ export function RequirementBand({ metric, value, min, max, unit, state = 'ok', c
   const out = state === 'attention'
   const direction = hasTarget && value != null ? (value < min ? t('band.below') : value > max ? t('band.above') : '') : ''
   const valueText = value == null ? t('band.noValue') : `${formatValue(metric, value, i18n.language)} ${unitText}`.trim()
-  const targetText = hasTarget ? t('band.target', { min, max }) : ''
+  const targetText = hasTarget ? t('band.target', { min: formatValue(metric, min, i18n.language), max: formatValue(metric, max, i18n.language) }) : ''
 
   return (
     <div className={cn('space-y-1.5', className)}>

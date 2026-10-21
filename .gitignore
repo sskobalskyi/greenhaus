@@ -5,4 +5,7 @@ node_modules/
 .env
 .vs/
 .idea/
-
+playwright-report/
+test-results/
+storybook-static/
+dist/

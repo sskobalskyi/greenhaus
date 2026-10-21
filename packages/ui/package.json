@@ -50,5 +50,10 @@
         "vite": "^8.3.4",
         "vitest": "^5.0.5"
     },
-    "description": "Greenhaus design system: shadcn/ui components and Storybook"
+    "description": "Greenhaus design system: shadcn/ui components and Storybook",
+    "exports": {
+        ".": "./src/index.ts",
+        "./styles.css": "./src/index.css"
+    },
+    "main": "./src/index.ts"
 }

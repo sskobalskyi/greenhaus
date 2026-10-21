@@ -23,6 +23,13 @@ app.UseCors();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapGreenhausApi();
 
+// Test support: reseed the in-memory state. Not part of the contract.
+app.MapPost("/mock/reset", (MockStore store) =>
+{
+    store.Reset();
+    return Results.NoContent();
+});
+
 // Serve the contracts so clients and tools can fetch them from the running mock.
 var contractsDirectory = builder.Configuration["Contracts:Path"] ?? Path.Combine(AppContext.BaseDirectory, "contracts");
 if (Directory.Exists(contractsDirectory))

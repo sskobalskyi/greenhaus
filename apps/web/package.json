@@ -1,0 +1,35 @@
+{
+  "name": "@greenhaus/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Greenhaus product app: pots, plants, controls, plans and the QR claim flow",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "build": "tsc -p tsconfig.app.json --noEmit && vite build",
+    "preview": "vite preview --port 5174",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit",
+    "lint": "oxlint",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "@greenhaus/ui": "*",
+    "@tanstack/react-query": "^5.90.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router": "^7.9.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.55.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.19.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "oxlint": "^1.88.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4"
+  }
+}

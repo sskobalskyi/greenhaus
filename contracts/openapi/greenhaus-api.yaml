@@ -75,6 +75,24 @@ paths:
               schema: { $ref: '#/components/schemas/Entitlements' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /tiers:
+    get:
+      tags: [Entitlements]
+      operationId: listTiers
+      summary: What every tier includes
+      description: |
+        Public, so the limits of all tiers are visible before sign-up and the plans page can compare
+        them. Prices belong to the billing service (`GET /plans`).
+      security: []
+      responses:
+        '200':
+          description: One entry per tier, from the free tier up
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TierLimits' }
+
   /species:
     get:
       tags: [Species]
@@ -802,6 +820,12 @@ components:
         automation:
           type: array
           items: { $ref: '#/components/schemas/AutomationLevel' }
+    TierLimits:
+      type: object
+      required: [tier, limits]
+      properties:
+        tier: { $ref: '#/components/schemas/Tier' }
+        limits: { $ref: '#/components/schemas/Limits' }
     Usage:
       type: object
       required: [pots, aiQuestionsThisMonth]

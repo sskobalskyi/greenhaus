@@ -1,6 +1,6 @@
 # Greenhaus
 
-[![Contracts](https://github.com/sskobalskyi/greenhaus/actions/workflows/contracts.yml/badge.svg)](https://github.com/sskobalskyi/greenhaus/actions/workflows/contracts.yml)
+[![Contracts](https://github.com/sskobalskyi/greenhaus/actions/workflows/ci.yml/badge.svg)](https://github.com/sskobalskyi/greenhaus/actions/workflows/ci.yml)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange)
 
 > Working name. Not affiliated with any existing Greenhaus business, and the name is not licensed under the MIT licence of this repository.
@@ -29,6 +29,7 @@ contracts/openapi/     HTTP contracts: Greenhaus API, billing API, Pulse device 
 contracts/asyncapi/    integration events (RabbitMQ) and device topics (MQTT)
 mock-server/           .NET mock of the Greenhaus API with contract tests ([details](mock-server/README.md))
 packages/ui/           design system and Storybook on shadcn/ui ([details](packages/ui/README.md))
+apps/web/              the product app ([details](apps/web/README.md))
 data/                  curated data, such as the species catalog
 docs/adr/              architecture decision records
 ```
@@ -52,6 +53,23 @@ npx --yes @redocly/cli lint contracts/openapi/*.yaml
 npx --yes @asyncapi/cli validate contracts/asyncapi/integration-events.yaml
 npx --yes @asyncapi/cli validate contracts/asyncapi/device-mqtt.yaml
 ```
+
+## The app
+
+React app for pots, plants, controls, plans and the QR claim flow, in English and Ukrainian, light and dark. It runs against the mock backend today.
+
+![Pots overview](docs/screenshots/app/pots-light-en.png)
+
+![Controls, light English](docs/screenshots/app/controls-light-en.png)
+
+```powershell
+npm install                    # installs the web workspace
+docker compose up -d mock      # the mock backend on :8090
+npm run dev -w @greenhaus/web  # http://localhost:5174
+npm run e2e -w @greenhaus/web  # 26 end-to-end tests with an accessibility scan of every page
+```
+
+See [apps/web](apps/web/README.md) and [ADR 0002](docs/adr/0002-web-workspace-and-design-system-from-source.md).
 
 ## Design system
 

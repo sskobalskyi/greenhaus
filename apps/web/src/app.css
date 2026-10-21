@@ -1,0 +1,5 @@
+@import "@greenhaus/ui/styles.css";
+
+/* Tailwind scans the app and the design system, which is consumed from source. */
+@source "./";
+@source "../../../packages/ui/src";

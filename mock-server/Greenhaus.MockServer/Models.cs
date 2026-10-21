@@ -55,6 +55,12 @@ public class Limits
     public required List<AutomationLevel> Automation { get; set; }
 }
 
+public class TierLimits
+{
+    public Tier Tier { get; set; }
+    public required Limits Limits { get; set; }
+}
+
 public class Usage
 {
     public int Pots { get; set; }
