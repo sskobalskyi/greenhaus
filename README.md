@@ -1,5 +1,8 @@
 # Greenhaus
 
+[![Contracts](https://github.com/sskobalskyi/greenhaus/actions/workflows/contracts.yml/badge.svg)](https://github.com/sskobalskyi/greenhaus/actions/workflows/contracts.yml)
+![Status: alpha](https://img.shields.io/badge/status-alpha-orange)
+
 > Working name. Not affiliated with any existing Greenhaus business, and the name is not licensed under the MIT licence of this repository.
 
 Smart pots for plants: sensors and relays in a pot controller, a shop to buy them, a QR scan to claim them, live monitoring and gentle automation, and an assistant that knows your plants. Greenhaus is the **product layer** that composes three generic platforms:
@@ -15,7 +18,9 @@ Greenhaus owns everything that is specific to plants: users and tiers, pots, zon
 
 ## Status
 
-Early. The first stream is the contract layer: HTTP APIs in OpenAPI, events and MQTT topics in AsyncAPI, and a mock backend that serves them so the UI and the services can be built in parallel. The Greenhaus API mock is running and contract-tested. The billing and Pulse mocks are next.
+**Alpha.** Contracts and the mock can change without notice, and there is no product code yet. Work lands through pull requests.
+
+The first stream is the contract layer: HTTP APIs in OpenAPI, events and MQTT topics in AsyncAPI, and a mock backend that serves them so the UI and the services can be built in parallel. The Greenhaus API mock is running and contract-tested. The billing and Pulse mocks are next.
 
 ## Layout
 
