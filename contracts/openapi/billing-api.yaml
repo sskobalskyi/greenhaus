@@ -1,0 +1,182 @@
+openapi: 3.1.0
+info:
+  title: Greenhaus Billing API
+  version: 0.1.0
+  summary: Subscriptions, plans and purchase grants.
+  description: |
+    A separate service that owns subscriptions and entitlement grants so that Orderflow stays
+    independent of Greenhaus. Payment is a mock provider. Renewal runs on a compressed demo clock.
+
+    Purchase grants are created from order events, never through this API. They are read-only here.
+    Changes are published as `subscription.changed`, `grant.status_changed` and `entitlement.changed`.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://localhost:8090/api/billing/v1
+    description: Local gateway
+security:
+  - bearerAuth: []
+paths:
+  /plans:
+    get:
+      operationId: listPlans
+      summary: Plans and their prices
+      description: Public, so prices are visible before sign-up.
+      security: []
+      responses:
+        '200':
+          description: Plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Plan' }
+  /subscription:
+    get:
+      operationId: getSubscription
+      summary: The caller's paid subscription, if any
+      responses:
+        '200':
+          description: The subscription
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      operationId: subscribe
+      summary: Start or change a paid subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SubscribeRequest' }
+      responses:
+        '201':
+          description: The subscription
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '402': { $ref: '#/components/responses/PaymentRequired' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /subscription/cancel:
+    post:
+      operationId: cancelSubscription
+      summary: Cancel at the end of the paid period
+      description: One call, no questions asked.
+      responses:
+        '200':
+          description: The cancelled subscription
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Subscription' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /grants:
+    get:
+      operationId: listGrants
+      summary: Entitlement grants earned by purchases
+      responses:
+        '200':
+          description: Grants
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Grant' }
+  /invoices:
+    get:
+      operationId: listInvoices
+      summary: Invoices of the mock provider
+      responses:
+        '200':
+          description: Invoices, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Invoice' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    BadRequest:
+      description: The request is invalid
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Not found
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PaymentRequired:
+      description: The mock provider declined the payment
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Problem:
+      type: object
+      required: [title, status, code]
+      properties:
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string, examples: [payment_declined, already_subscribed, no_subscription] }
+    Tier:
+      type: string
+      enum: [novice, gardener, druid]
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount: { type: number }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+    Plan:
+      type: object
+      required: [tier, pricePerMonth]
+      properties:
+        tier: { $ref: '#/components/schemas/Tier' }
+        pricePerMonth: { $ref: '#/components/schemas/Money' }
+    SubscribeRequest:
+      type: object
+      required: [tier, paymentMethodToken]
+      properties:
+        tier: { $ref: '#/components/schemas/Tier' }
+        paymentMethodToken:
+          type: string
+          description: A token from the mock provider. A token ending in `-declined` is refused.
+    Subscription:
+      type: object
+      required: [id, tier, status, currentPeriodEnd]
+      properties:
+        id: { type: string, format: uuid }
+        tier: { $ref: '#/components/schemas/Tier' }
+        status: { type: string, enum: [active, past_due, cancelled] }
+        currentPeriodEnd: { type: string, format: date-time }
+        cancelAtPeriodEnd: { type: boolean }
+    Grant:
+      type: object
+      required: [id, orderId, tier, status, validFrom, validUntil]
+      properties:
+        id: { type: string, format: uuid }
+        orderId: { type: string, format: uuid }
+        tier: { $ref: '#/components/schemas/Tier' }
+        status:
+          type: string
+          enum: [active, at_risk, revoked]
+          description: '`at_risk` after a return or refund, until the 7 day grace period ends'
+        validFrom: { type: string, format: date-time }
+        validUntil: { type: string, format: date-time }
+        graceEndsAt: { type: [string, 'null'], format: date-time }
+    Invoice:
+      type: object
+      required: [id, issuedAt, amount, status]
+      properties:
+        id: { type: string, format: uuid }
+        issuedAt: { type: string, format: date-time }
+        amount: { $ref: '#/components/schemas/Money' }
+        status: { type: string, enum: [paid, failed, void] }

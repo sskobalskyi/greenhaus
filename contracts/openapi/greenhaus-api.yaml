@@ -1,0 +1,1148 @@
+openapi: 3.1.0
+info:
+  title: Greenhaus API
+  version: 0.1.0
+  summary: Product API of Greenhaus, the plant-care layer over Orderflow, Pulse and Docs-Brain.
+  description: |
+    The only API that knows what a pot is. Live readings and history come from the Pulse device API,
+    questions to the assistant go to Docs-Brain; this API owns pots, zones, plants, requirements,
+    automation policy, care tasks, claims and the entitlements derived from the subscription.
+
+    Errors use RFC 9457 problem details with a stable `code` that clients translate (`en` and `uk`),
+    for example `limit_reached` or `tier_required`.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://localhost:8090/api/greenhaus/v1
+    description: Local gateway
+security:
+  - bearerAuth: []
+tags:
+  - name: Profile
+  - name: Entitlements
+  - name: Species
+  - name: Pots
+  - name: Zones
+  - name: Plants
+  - name: Requirements
+  - name: Status
+  - name: Controls
+  - name: Care
+  - name: Claims
+paths:
+  /me:
+    get:
+      tags: [Profile]
+      operationId: getMe
+      summary: Current user profile
+      responses:
+        '200':
+          description: The profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    patch:
+      tags: [Profile]
+      operationId: updateMe
+      summary: Update display name or locale
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileUpdate' }
+      responses:
+        '200':
+          description: The updated profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /me/entitlements:
+    get:
+      tags: [Entitlements]
+      operationId: getEntitlements
+      summary: Effective tier, limits and current usage
+      description: The effective tier is the best of the paid subscription and active purchase grants.
+      responses:
+        '200':
+          description: Entitlements
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Entitlements' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /species:
+    get:
+      tags: [Species]
+      operationId: listSpecies
+      summary: Search the species catalog
+      parameters:
+        - name: query
+          in: query
+          description: Case-insensitive match on common or scientific name
+          schema: { type: string, maxLength: 80 }
+      responses:
+        '200':
+          description: Matching species
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Species' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /species/{speciesId}:
+    get:
+      tags: [Species]
+      operationId: getSpecies
+      summary: One species
+      parameters:
+        - $ref: '#/components/parameters/SpeciesId'
+      responses:
+        '200':
+          description: The species
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Species' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /pots:
+    get:
+      tags: [Pots]
+      operationId: listPots
+      summary: Pots of the current user
+      responses:
+        '200':
+          description: Pots
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Pot' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Pots]
+      operationId: createPot
+      summary: Create a pot
+      description: Fails with `limit_reached` (limitType `pots`) when the tier's pot limit is used up.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PotCreate' }
+      responses:
+        '201':
+          description: The created pot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pot' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/TierRequired' }
+  /pots/{potId}:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Pots]
+      operationId: getPot
+      summary: One pot
+      responses:
+        '200':
+          description: The pot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pot' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Pots]
+      operationId: updatePot
+      summary: Rename or move a pot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PotUpdate' }
+      responses:
+        '200':
+          description: The updated pot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pot' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Pots]
+      operationId: deletePot
+      summary: Delete a pot and everything in it
+      responses:
+        '204': { description: Deleted }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /pots/{potId}/view-mode:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    put:
+      tags: [Zones]
+      operationId: setViewMode
+      summary: Switch a pot between the Simple and Zones views
+      description: |
+        `zones` is a paid view limited by the tier's `zoneGridMax`; otherwise `403 tier_required`.
+        Switching back to `simple` needs a primary channel for each metric that has more than one,
+        and keeps the other zones' history read-only.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ViewModeUpdate' }
+      responses:
+        '200':
+          description: The updated pot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pot' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/TierRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/zones:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Zones]
+      operationId: listZones
+      summary: Zones of a pot
+      description: In the Simple view a pot has exactly one zone covering the whole pot.
+      responses:
+        '200':
+          description: Zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Zone' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/zones/{zoneId}:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+      - $ref: '#/components/parameters/ZoneId'
+    patch:
+      tags: [Zones]
+      operationId: updateZone
+      summary: Rename a zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [label]
+              properties:
+                label: { type: string, minLength: 1, maxLength: 40 }
+      responses:
+        '200':
+          description: The updated zone
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Zone' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /pots/{potId}/plants:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Plants]
+      operationId: listPlants
+      summary: Plants in a pot
+      responses:
+        '200':
+          description: Plants
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Plant' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Plants]
+      operationId: addPlant
+      summary: Add a plant to a pot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlantCreate' }
+      responses:
+        '201':
+          description: The created plant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Plant' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/plants/{plantId}:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+      - $ref: '#/components/parameters/PlantId'
+    patch:
+      tags: [Plants]
+      operationId: updatePlant
+      summary: Update a plant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlantUpdate' }
+      responses:
+        '200':
+          description: The updated plant
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Plant' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Plants]
+      operationId: removePlant
+      summary: Remove a plant
+      responses:
+        '204': { description: Removed }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /pots/{potId}/requirements:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Requirements]
+      operationId: getRequirements
+      summary: The pot's shared requirements
+      responses:
+        '200':
+          description: Requirements
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Requirements' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Requirements]
+      operationId: setRequirements
+      summary: Replace the requirements
+      description: Changing requirements updates the per-device alert rules in Pulse.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Requirements' }
+      responses:
+        '200':
+          description: The stored requirements
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Requirements' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/requirements/suggestion:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Requirements]
+      operationId: suggestRequirements
+      summary: Suggested requirements from the plants in the pot
+      description: |
+        The suggestion is the intersection of the plants' preferred ranges. When the intersection is
+        empty for a metric, that metric is listed in `conflicts` with the plants that disagree.
+      responses:
+        '200':
+          description: Suggestion
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RequirementsSuggestion' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /pots/{potId}/status:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Status]
+      operationId: getPotStatus
+      summary: Current state of a pot, per zone, never averaged
+      description: The pot state is the worst zone state, with that zone named.
+      responses:
+        '200':
+          description: Status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PotStatus' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/devices:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Status]
+      operationId: listPotDevices
+      summary: Controllers linked to a pot
+      responses:
+        '200':
+          description: Devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/LinkedDevice' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /pots/{potId}/actuators:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Controls]
+      operationId: listActuators
+      summary: Actuators of a pot with mode, state and safety limits
+      responses:
+        '200':
+          description: Actuators
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Actuator' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/actuators/{actuatorId}/mode:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+      - $ref: '#/components/parameters/ActuatorId'
+    put:
+      tags: [Controls]
+      operationId: setActuatorMode
+      summary: Set the control mode of an actuator
+      description: |
+        `auto` beyond the tier's automation level fails with `403 tier_required`. A heater cannot be
+        set to `auto` without a declared thermal cutoff (`400 thermal_cutoff_required`), and an actuator
+        whose metric has no calibration cannot be set to `auto` (`400 calibration_required`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode]
+              properties:
+                mode: { $ref: '#/components/schemas/ControlMode' }
+      responses:
+        '200':
+          description: The updated actuator
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Actuator' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/TierRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/actuators/{actuatorId}/run:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+      - $ref: '#/components/parameters/ActuatorId'
+    post:
+      tags: [Controls]
+      operationId: runActuator
+      summary: Run an actuator manually
+      description: The duration is clamped to the actuator's per-run cap, and refused while the kill switch is on.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [durationSeconds]
+              properties:
+                durationSeconds: { type: integer, minimum: 1, maximum: 3600 }
+      responses:
+        '202':
+          description: The command was accepted and sent to the controller
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommandReceipt' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/actuators/{actuatorId}/limits:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+      - $ref: '#/components/parameters/ActuatorId'
+    put:
+      tags: [Controls]
+      operationId: setActuatorLimits
+      summary: Tighten the safety limits of an actuator
+      description: Limits can only be tightened within the hard limits the controller reports.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SafetyLimits' }
+      responses:
+        '200':
+          description: The updated actuator
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Actuator' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/kill-switch:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    put:
+      tags: [Controls]
+      operationId: setKillSwitch
+      summary: Stop all automation and manual runs for a pot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        '200':
+          description: The updated pot
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pot' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/audit-log:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Controls]
+      operationId: listAuditLog
+      summary: What the automation did and why
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: Entries, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/AuditEntry' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/channels/{channelId}/calibration:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+      - name: channelId
+        in: path
+        required: true
+        schema: { type: string }
+    put:
+      tags: [Controls]
+      operationId: calibrateChannel
+      summary: Calibrate a sensor channel with its dry and wet raw values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Calibration' }
+      responses:
+        '200':
+          description: The stored calibration
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Calibration' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /pots/{potId}/care-tasks:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    get:
+      tags: [Care]
+      operationId: listCareTasks
+      summary: Care tasks of a pot
+      parameters:
+        - name: state
+          in: query
+          schema: { type: string, enum: [open, done] }
+      responses:
+        '200':
+          description: Care tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CareTask' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Care]
+      operationId: createCareTask
+      summary: Create a custom care task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CareTaskCreate' }
+      responses:
+        '201':
+          description: The created task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CareTask' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /pots/{potId}/care-tasks/{taskId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+      - name: taskId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Care]
+      operationId: completeCareTask
+      summary: Mark a care task done
+      responses:
+        '200':
+          description: The completed task
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CareTask' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /claims/preview:
+    get:
+      tags: [Claims]
+      operationId: previewClaim
+      summary: Look at a device before claiming it
+      description: Used by the page opened from the QR code. Rate limited. Does not consume the token.
+      parameters:
+        - name: deviceId
+          in: query
+          required: true
+          schema: { type: string }
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: What would be claimed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ClaimPreview' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /claims:
+    post:
+      tags: [Claims]
+      operationId: claimDevice
+      summary: Claim a device and attach it to a pot
+      description: |
+        The token is one-time and only valid after the order has shipped. On success the controller is
+        linked to the pot, its channels become zones' sensors, and `device.claimed` is published.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ClaimRequest' }
+      responses:
+        '201':
+          description: The claim
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Claim' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token, validated at the gateway.
+
+  parameters:
+    PotId:
+      name: potId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ZoneId:
+      name: zoneId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    PlantId:
+      name: plantId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    ActuatorId:
+      name: actuatorId
+      in: path
+      required: true
+      schema: { type: string }
+    SpeciesId:
+      name: speciesId
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[a-z0-9-]+$' }
+
+  responses:
+    BadRequest:
+      description: The request is invalid
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TierRequired:
+      description: The current tier does not allow this, or a limit is reached
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Not found, or not owned by the caller
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: The request conflicts with the current state
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TooManyRequests:
+      description: Rate limit exceeded
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      description: RFC 9457 problem details with a stable machine-readable code
+      required: [title, status, code]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code:
+          type: string
+          description: Stable code the UI translates
+          examples: [limit_reached, tier_required, thermal_cutoff_required, calibration_required, kill_switch_on, token_invalid]
+        limitType:
+          type: string
+          enum: [pots, ai_questions, history, automation, zone_grid]
+        requiredTier: { $ref: '#/components/schemas/Tier' }
+
+    Tier:
+      type: string
+      enum: [novice, gardener, druid]
+      description: Novice (free), Gardener, Druid
+    Metric:
+      type: string
+      enum: [temperature, air_humidity, soil_moisture, ph, light, airflow]
+    ControlMode:
+      type: string
+      enum: [off, notify, auto]
+    ViewMode:
+      type: string
+      enum: [simple, zones]
+    Locale:
+      type: string
+      enum: [en, uk]
+
+    Profile:
+      type: object
+      required: [id, displayName, email, locale, tier]
+      properties:
+        id: { type: string, description: Keycloak subject }
+        displayName: { type: string }
+        email: { type: string, format: email }
+        locale: { $ref: '#/components/schemas/Locale' }
+        tier: { $ref: '#/components/schemas/Tier' }
+        createdAt: { type: string, format: date-time }
+    ProfileUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 60 }
+        locale: { $ref: '#/components/schemas/Locale' }
+
+    AutomationLevel:
+      type: object
+      required: [metric, maxMode]
+      properties:
+        metric: { $ref: '#/components/schemas/Metric' }
+        maxMode:
+          $ref: '#/components/schemas/ControlMode'
+          description: The most automated mode the tier allows for this metric
+    Limits:
+      type: object
+      required: [pots, historyDays, aiQuestionsPerMonth, aiDataAccess, zoneGridMax, automation]
+      properties:
+        pots:
+          type: [integer, 'null']
+          description: Maximum number of pots, null for unlimited
+        historyDays: { type: integer }
+        aiQuestionsPerMonth: { type: integer }
+        aiDataAccess:
+          type: string
+          enum: [none, current, history]
+          description: What the assistant may read about the user's plants
+        zoneGridMax:
+          type: integer
+          minimum: 1
+          description: Largest grid dimension allowed in the Zones view, 1 means Simple only
+        automation:
+          type: array
+          items: { $ref: '#/components/schemas/AutomationLevel' }
+    Usage:
+      type: object
+      required: [pots, aiQuestionsThisMonth]
+      properties:
+        pots: { type: integer }
+        aiQuestionsThisMonth: { type: integer }
+    EntitlementSource:
+      type: object
+      required: [type, tier, status]
+      properties:
+        type: { type: string, enum: [subscription, purchase_grant] }
+        tier: { $ref: '#/components/schemas/Tier' }
+        status: { type: string, enum: [active, at_risk, past_due, revoked, cancelled] }
+        validUntil: { type: [string, 'null'], format: date-time }
+        orderId: { type: string, format: uuid }
+        graceEndsAt: { type: [string, 'null'], format: date-time }
+    Entitlements:
+      type: object
+      required: [tier, limits, usage, sources]
+      properties:
+        tier: { $ref: '#/components/schemas/Tier' }
+        limits: { $ref: '#/components/schemas/Limits' }
+        usage: { $ref: '#/components/schemas/Usage' }
+        sources:
+          type: array
+          items: { $ref: '#/components/schemas/EntitlementSource' }
+
+    Range:
+      type: object
+      required: [min, max]
+      properties:
+        min: { type: number }
+        max: { type: number }
+    Species:
+      type: object
+      required: [id, commonName, scientificName, preferred]
+      properties:
+        id: { type: string, pattern: '^[a-z0-9-]+$' }
+        commonName: { type: string }
+        scientificName: { type: string }
+        category: { type: string, enum: [foliage, succulent, herb, vegetable, flowering, fern] }
+        preferred:
+          type: object
+          description: Preferred ranges per metric. Metrics that do not apply are omitted.
+          propertyNames: { $ref: '#/components/schemas/Metric' }
+          additionalProperties: { $ref: '#/components/schemas/Range' }
+        fertilizerIntervalDays:
+          type: [integer, 'null']
+          description: Days between fertilizing in the growing season, null for none
+        notes: { type: string }
+
+    Pot:
+      type: object
+      required: [id, name, kind, viewMode, killSwitch, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        location: { type: string }
+        kind: { type: string, enum: [pot, balcony, bed] }
+        viewMode: { $ref: '#/components/schemas/ViewMode' }
+        gridRows: { type: integer, minimum: 1 }
+        gridCols: { type: integer, minimum: 1 }
+        killSwitch: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    PotCreate:
+      type: object
+      required: [name, kind]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        location: { type: string, maxLength: 60 }
+        kind: { type: string, enum: [pot, balcony, bed] }
+    PotUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 60 }
+        location: { type: string, maxLength: 60 }
+    ViewModeUpdate:
+      type: object
+      required: [mode]
+      properties:
+        mode: { $ref: '#/components/schemas/ViewMode' }
+        gridRows: { type: integer, minimum: 1, maximum: 8 }
+        gridCols: { type: integer, minimum: 1, maximum: 8 }
+        primaryChannels:
+          type: array
+          description: When switching to simple, the channel to keep for each metric
+          items:
+            type: object
+            required: [metric, channelId]
+            properties:
+              metric: { $ref: '#/components/schemas/Metric' }
+              channelId: { type: string }
+    Zone:
+      type: object
+      required: [id, row, col, label]
+      properties:
+        id: { type: string, format: uuid }
+        row: { type: integer, minimum: 0 }
+        col: { type: integer, minimum: 0 }
+        label: { type: string }
+
+    Plant:
+      type: object
+      required: [id, speciesId, nickname, plantedAt]
+      properties:
+        id: { type: string, format: uuid }
+        speciesId: { type: string }
+        nickname: { type: string }
+        zoneId: { type: [string, 'null'], format: uuid }
+        plantedAt: { type: string, format: date }
+        notes: { type: string }
+    PlantCreate:
+      type: object
+      required: [speciesId, nickname]
+      properties:
+        speciesId: { type: string }
+        nickname: { type: string, minLength: 1, maxLength: 60 }
+        zoneId: { type: [string, 'null'], format: uuid }
+        plantedAt: { type: string, format: date }
+        notes: { type: string, maxLength: 500 }
+    PlantUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        nickname: { type: string, minLength: 1, maxLength: 60 }
+        zoneId: { type: [string, 'null'], format: uuid }
+        notes: { type: string, maxLength: 500 }
+
+    MetricRequirement:
+      type: object
+      required: [metric, enabled]
+      properties:
+        metric: { $ref: '#/components/schemas/Metric' }
+        enabled:
+          type: boolean
+          description: Optional metrics such as pH can be disabled when no probe is linked
+        min: { type: number }
+        max: { type: number }
+        margin:
+          type: number
+          minimum: 0
+          description: Hysteresis margin so a value near the edge does not flap
+    Requirements:
+      type: object
+      required: [metrics]
+      properties:
+        metrics:
+          type: array
+          items: { $ref: '#/components/schemas/MetricRequirement' }
+    RequirementConflict:
+      type: object
+      required: [metric, plants]
+      properties:
+        metric: { $ref: '#/components/schemas/Metric' }
+        plants:
+          type: array
+          description: Ids of the plants whose ranges do not overlap
+          items: { type: string, format: uuid }
+    RequirementsSuggestion:
+      type: object
+      required: [requirements, conflicts]
+      properties:
+        requirements: { $ref: '#/components/schemas/Requirements' }
+        conflicts:
+          type: array
+          items: { $ref: '#/components/schemas/RequirementConflict' }
+
+    ReadingState:
+      type: string
+      enum: [ok, attention, offline, unknown]
+    MetricReading:
+      type: object
+      required: [metric, state]
+      properties:
+        metric: { $ref: '#/components/schemas/Metric' }
+        channelId: { type: string }
+        value: { type: [number, 'null'] }
+        unit: { type: string }
+        state: { $ref: '#/components/schemas/ReadingState' }
+        direction:
+          type: string
+          enum: [below, above]
+          description: Present when the value is out of range
+        updatedAt: { type: [string, 'null'], format: date-time }
+    ZoneStatus:
+      type: object
+      required: [zoneId, state, metrics]
+      properties:
+        zoneId: { type: string, format: uuid }
+        state: { $ref: '#/components/schemas/ReadingState' }
+        metrics:
+          type: array
+          items: { $ref: '#/components/schemas/MetricReading' }
+    ActiveAlert:
+      type: object
+      required: [id, metric, zoneId, since]
+      properties:
+        id: { type: string }
+        metric: { $ref: '#/components/schemas/Metric' }
+        zoneId: { type: string, format: uuid }
+        since: { type: string, format: date-time }
+        message: { type: string }
+    PotStatus:
+      type: object
+      required: [potId, state, zones]
+      properties:
+        potId: { type: string, format: uuid }
+        state: { $ref: '#/components/schemas/ReadingState' }
+        worstZoneId: { type: [string, 'null'], format: uuid }
+        zones:
+          type: array
+          items: { $ref: '#/components/schemas/ZoneStatus' }
+        alerts:
+          type: array
+          items: { $ref: '#/components/schemas/ActiveAlert' }
+    LinkedDevice:
+      type: object
+      required: [deviceId, model, status]
+      properties:
+        deviceId: { type: string }
+        model: { type: string }
+        status: { type: string, enum: [online, offline] }
+        lastSeenAt: { type: [string, 'null'], format: date-time }
+        firmware: { type: string }
+        thermalCutoffDeclared: { type: boolean }
+
+    SafetyLimits:
+      type: object
+      required: [maxRunSeconds, minIntervalSeconds, dailyCapSeconds]
+      properties:
+        maxRunSeconds: { type: integer, minimum: 1 }
+        minIntervalSeconds: { type: integer, minimum: 0 }
+        dailyCapSeconds: { type: integer, minimum: 1 }
+        maxFruitlessRuns:
+          type: integer
+          minimum: 1
+          description: Stop and notify when the metric does not respond after this many runs
+    Actuator:
+      type: object
+      required: [id, kind, metric, mode, state, limits]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [pump, heater, lamp, fan, humidifier] }
+        metric: { $ref: '#/components/schemas/Metric' }
+        mode: { $ref: '#/components/schemas/ControlMode' }
+        state: { type: string, enum: [idle, running, blocked, fault] }
+        maxModeForTier: { $ref: '#/components/schemas/ControlMode' }
+        limits: { $ref: '#/components/schemas/SafetyLimits' }
+        hardLimits:
+          allOf:
+            - $ref: '#/components/schemas/SafetyLimits'
+          description: The limits enforced by the controller itself, which cannot be exceeded
+        lastRunAt: { type: [string, 'null'], format: date-time }
+    CommandReceipt:
+      type: object
+      required: [commandId, status]
+      properties:
+        commandId: { type: string, format: uuid }
+        status: { type: string, enum: [queued, sent] }
+    AuditEntry:
+      type: object
+      required: [id, at, actor, action, reason]
+      properties:
+        id: { type: string, format: uuid }
+        at: { type: string, format: date-time }
+        actor: { type: string, enum: [automation, user, safety] }
+        actuatorId: { type: string }
+        action: { type: string, examples: [run, blocked, mode_changed, limit_changed, kill_switch] }
+        reason:
+          type: string
+          description: Why it happened, for example "zone 3 soil moisture below minimum"
+        outcome: { type: string, enum: [completed, refused, failed, expired] }
+    Calibration:
+      type: object
+      required: [dryRaw, wetRaw]
+      properties:
+        dryRaw: { type: number }
+        wetRaw: { type: number }
+        calibratedAt: { type: string, format: date-time }
+
+    CareTaskCreate:
+      type: object
+      required: [title, dueAt]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 80 }
+        dueAt: { type: string, format: date-time }
+        repeatEveryDays: { type: [integer, 'null'], minimum: 1 }
+    CareTask:
+      type: object
+      required: [id, kind, title, dueAt, state]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [fertilize, check_pump, custom, ph_check] }
+        title: { type: string }
+        dueAt: { type: string, format: date-time }
+        state: { type: string, enum: [open, done] }
+        completedAt: { type: [string, 'null'], format: date-time }
+        origin:
+          type: string
+          enum: [species_schedule, ph_sensor, safety_schedule, user]
+          description: Where the task came from
+
+    ClaimPreview:
+      type: object
+      required: [deviceId, model, claimable]
+      properties:
+        deviceId: { type: string }
+        model: { type: string }
+        claimable: { type: boolean }
+        reason:
+          type: string
+          enum: [not_shipped, already_claimed, token_expired]
+          description: Present when not claimable
+        channels:
+          type: array
+          items:
+            type: object
+            required: [channelId, metric]
+            properties:
+              channelId: { type: string }
+              metric: { $ref: '#/components/schemas/Metric' }
+        actuators:
+          type: array
+          items:
+            type: object
+            required: [id, kind]
+            properties:
+              id: { type: string }
+              kind: { type: string, enum: [pump, heater, lamp, fan, humidifier] }
+    ClaimRequest:
+      type: object
+      required: [deviceId, token, potId]
+      properties:
+        deviceId: { type: string }
+        token: { type: string }
+        potId: { type: string, format: uuid }
+    Claim:
+      type: object
+      required: [deviceId, potId, claimedAt]
+      properties:
+        deviceId: { type: string }
+        potId: { type: string, format: uuid }
+        claimedAt: { type: string, format: date-time }

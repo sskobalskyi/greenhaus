@@ -1,0 +1,8 @@
+# Lint rules for the contracts. Servers are intentionally local, and authentication failures are
+# described once in the security scheme rather than on every operation.
+extends:
+  - recommended
+rules:
+  no-server-example.com: off
+  tag-description: off
+  operation-4xx-response: off
