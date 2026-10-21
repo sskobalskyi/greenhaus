@@ -305,4 +305,17 @@ public class ContractTests
         var undocumented = new HttpResponseMessage(HttpStatusCode.Gone);
         await Assert.ThrowsAsync<Xunit.Sdk.XunitException>(() => api.Contract.Verify(undocumented, "GET", "/pots/{potId}"));
     }
+
+    [Fact]
+    public async Task Zones_have_no_label_until_the_user_names_them()
+    {
+        using var api = new Api();
+        var bed = Api.Id(await api.PotNamed("Balcony bed"));
+        var zones = await api.Node(await api.Call("GET", "/pots/{potId}/zones", new { potId = bed }));
+        Assert.All(zones.AsArray(), zone => Assert.Null(zone!["label"]));
+
+        var id = zones[0]!["id"]!.GetValue<string>();
+        var renamed = await api.Node(await api.Call("PATCH", "/pots/{potId}/zones/{zoneId}", new { potId = bed, zoneId = id }, new { label = "Tomatoes" }));
+        Assert.Equal("Tomatoes", renamed["label"]!.GetValue<string>());
+    }
 }

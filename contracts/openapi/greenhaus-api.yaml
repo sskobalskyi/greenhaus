@@ -897,12 +897,17 @@ components:
               channelId: { type: string }
     Zone:
       type: object
-      required: [id, row, col, label]
+      required: [id, row, col]
       properties:
         id: { type: string, format: uuid }
         row: { type: integer, minimum: 0 }
         col: { type: integer, minimum: 0 }
-        label: { type: string }
+        label:
+          type: string
+          description: |
+            A name the user gave the zone. Absent until they do, and the client then shows a localized
+            default such as "Zone 3" (numbered by row and column) or "Whole pot" in the Simple view.
+            The API never returns a default label, so the language of the interface is the client's choice.
 
     Plant:
       type: object

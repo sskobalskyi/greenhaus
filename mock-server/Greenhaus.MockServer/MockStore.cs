@@ -202,7 +202,7 @@ public class MockStore
                     {
                         Id = $"{channel.Id}-{direction}", Metric = channel.Metric, ZoneId = zone.Id,
                         Since = now.AddMinutes(-12),
-                        Message = $"{zone.Label}: {Key(channel.Metric)} is {direction} the target range",
+                        Message = $"{zone.Label ?? $"Zone {zone.Row * (pot.Pot.GridCols ?? 1) + zone.Col + 1}"}: {Key(channel.Metric)} is {direction} the target range",
                     });
                 }
             }
@@ -228,13 +228,13 @@ public class MockStore
 
     public static List<Zone> BuildZones(int rows, int cols, bool simple)
     {
-        if (simple) return [new Zone { Id = Guid.NewGuid(), Row = 0, Col = 0, Label = "Whole pot" }];
+        if (simple) return [new Zone { Id = Guid.NewGuid(), Row = 0, Col = 0 }];
         var zones = new List<Zone>();
         for (var r = 0; r < rows; r++)
         {
             for (var c = 0; c < cols; c++)
             {
-                zones.Add(new Zone { Id = Guid.NewGuid(), Row = r, Col = c, Label = $"Zone {r * cols + c + 1}" });
+                zones.Add(new Zone { Id = Guid.NewGuid(), Row = r, Col = c });
             }
         }
         return zones;
