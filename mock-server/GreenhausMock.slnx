@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Greenhaus.MockServer.Tests/Greenhaus.MockServer.Tests.csproj" />
+  <Project Path="Greenhaus.MockServer/Greenhaus.MockServer.csproj" />
+</Solution>

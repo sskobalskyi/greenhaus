@@ -1,0 +1,11 @@
+name: greenhaus
+
+services:
+  # Contract-conformant mock of the Greenhaus API, on the port the contract names.
+  mock:
+    build:
+      context: .
+      dockerfile: mock-server/Dockerfile
+    ports:
+      - "8090:8080"
+    restart: unless-stopped
