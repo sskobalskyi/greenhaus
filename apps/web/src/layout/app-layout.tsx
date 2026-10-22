@@ -10,12 +10,12 @@ import { mockTier, setMockTier } from '~/api/http'
 const link = ({ isActive }: { isActive: boolean }) =>
   `rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-secondary'}`
 
-/** With sign-in on, nothing of the app (and none of its requests) appears until there is a signed-in person. The set-up guide stays open. */
+/** With sign-in on, nothing of the app (and none of its requests) appears until there is a signed-in person. The set-up guide and the plans stay open, so limits and prices can be read before signing up. */
 export function AppLayout() {
   const { t } = useTranslation()
   const auth = useAuth()
   const { pathname } = useLocation()
-  const blocked = auth.enabled && !auth.user && !pathname.startsWith('/guide')
+  const blocked = auth.enabled && !auth.user && !pathname.startsWith('/guide') && !pathname.startsWith('/plans')
 
   useEffect(() => {
     if (blocked && !auth.loading && !isLeaving()) void signIn()

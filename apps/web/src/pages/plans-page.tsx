@@ -2,12 +2,15 @@ import { Button, TierCard, type Tier } from '@greenhaus/ui'
 import { Info, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { signIn, useAuth } from '~/auth/auth'
 import { useCancelSubscription, useEntitlements, usePrices, useSubscribe, useSubscription, useTiers } from '~/api/hooks'
 import { ApiError } from '~/api/http'
 import { CardGridSkeleton, LoadError } from '~/components/feedback'
 
 export function PlansPage() {
   const { t, i18n } = useTranslation()
+  const auth = useAuth()
+  const signedOut = auth.enabled && !auth.loading && !auth.user
   const tiers = useTiers()
   const entitlements = useEntitlements()
   const prices = usePrices()
@@ -23,6 +26,11 @@ export function PlansPage() {
 
   const choose = (tier: Tier) => {
     setNotice(null)
+    // Choosing a plan needs an account: sign in or register, then come back here.
+    if (signedOut) {
+      void signIn('/plans')
+      return
+    }
     // The free tier is not bought: choosing it ends the paid plan at the end of the period.
     if (tier === 'novice') {
       cancel.mutate()
@@ -44,6 +52,13 @@ export function PlansPage() {
         <h1 className="text-3xl font-semibold">{t('plans.title')}</h1>
         <p className="max-w-3xl text-muted-foreground">{t('plans.subtitle')}</p>
       </div>
+
+      {signedOut && (
+        <p role="note" className="flex items-center gap-2 rounded-xl border bg-secondary p-3 text-sm font-semibold">
+          <Info className="size-4" aria-hidden />
+          {t('plans.signInPrompt')}
+        </p>
+      )}
 
       {atRisk && (
         <div role="alert" className="space-y-1 rounded-xl border border-attention/60 bg-attention/10 p-4">
@@ -91,15 +106,15 @@ export function PlansPage() {
       )}
 
       {(tiers.isError || entitlements.isError) && <LoadError onRetry={() => void tiers.refetch()} />}
-      {(tiers.isPending || entitlements.isPending) && <CardGridSkeleton />}
-      {tiers.data && entitlements.data && (
+      {tiers.isPending && <CardGridSkeleton />}
+      {tiers.data && (entitlements.data || signedOut) && (
         <ul className="grid gap-4 md:grid-cols-3">
           {tiers.data.map(({ tier, limits }) => (
             <li key={tier}>
               <TierCard
                 tier={tier}
                 limits={limits}
-                current={entitlements.data.tier === tier}
+                current={entitlements.data?.tier === tier}
                 price={prices.data?.find((plan) => plan.tier === tier)?.pricePerMonth}
                 onChoose={choose}
                 className="h-full"
