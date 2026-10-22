@@ -111,7 +111,7 @@ $env:VITE_API_BASE = "http://localhost:8091/api/greenhaus/v1"
 npm run dev -w @greenhaus/web   # http://localhost:5174
 ```
 
-The app sends a signed-out person to Keycloak (in the app's language), where anyone can register (or use `demo` / `demo`). The API validates the token's issuer and the audience `greenhaus-api`, and `/me` is created from the token on the first call. Sign-out ends the Keycloak session. See [ADR 4](docs/adr/0004-sign-in.md).
+The app sends a signed-out person to Keycloak (in the app's language), where anyone can register (or use `demo` / `demo`). The API validates the token's issuer and the audience `greenhaus-api`, and `/me` is created from the token on the first call. The plans and the set-up guide can be read without an account; everything else asks for one. Sign-out ends the Keycloak session. See [ADR 4](docs/adr/0004-sign-in.md).
 
 ### Against a live Pulse
 

@@ -114,6 +114,7 @@
   },
   "plans": {
     "title": "Plans",
+    "signInPrompt": "Sign in or create an account to choose a plan. Everything you see here is free to look at.",
     "subtitle": "Monitoring, alerts and safety are free for everyone. Plans add pots, history, assistant questions and more automation.",
     "subscribed": "You are now on {{tier}}. Nothing real was charged: this is a demo billing service.",
     "declined": "The card was declined, so your plan did not change.",

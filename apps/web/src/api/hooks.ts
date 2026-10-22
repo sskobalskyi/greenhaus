@@ -1,13 +1,21 @@
 import type { ControlMode, Schemas } from '@greenhaus/ui'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '~/auth/auth'
 import { ApiError, api, billingBase, mockTier } from './http'
+
+/** Requests that belong to a person wait until there is one. The plan list and the tiers are public and never wait. */
+const useSignedIn = () => {
+  const auth = useAuth()
+  return !auth.enabled || auth.user !== null
+}
 
 type S = Schemas
 
 // The mock tier is part of every key, so switching it refetches everything.
 export const key = (...parts: unknown[]) => ['greenhaus', mockTier(), ...parts]
 
-export const useEntitlements = () => useQuery({ queryKey: key('entitlements'), queryFn: () => api<S['Entitlements']>('/me/entitlements') })
+export const useEntitlements = () =>
+  useQuery({ queryKey: key('entitlements'), queryFn: () => api<S['Entitlements']>('/me/entitlements'), enabled: useSignedIn() })
 export const useTiers = () => useQuery({ queryKey: key('tiers'), queryFn: () => api<S['TierLimits'][]>('/tiers') })
 export const useSpecies = () => useQuery({ queryKey: key('species'), queryFn: () => api<S['Species'][]>('/species'), staleTime: Infinity })
 
@@ -39,6 +47,7 @@ type Subscription = { id: string; tier: S['Tier']; status: 'active' | 'past_due'
 /** The paid subscription, or null when there is none. Billing answers 404 for no subscription. */
 export const useSubscription = () =>
   useQuery({
+    enabled: useSignedIn(),
     queryKey: ['billing', 'subscription'],
     queryFn: async () => {
       try {
