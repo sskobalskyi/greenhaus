@@ -98,7 +98,9 @@ public class AllocationTests(FulfilmentFixture f)
         // A marker order proves the two above were handled by the time it is seen.
         var marker = Guid.NewGuid();
         await f.Confirmed(marker, "customer-3", (Starter, 1));
-        await f.WaitForAllocations(marker, 1);
+        var markerDevice = (await f.WaitForAllocations(marker, 1))[0].DeviceId;
+        // Events leave in the order they were written, so once the marker's is heard, an extra one for the order would have been too.
+        await HeardFor(markerDevice);
 
         Assert.Equal(2, (await f.WaitForAllocations(order, 2)).Count);
         Assert.Equal(2, f.Allocated.Count(h => h.Body.Contains(order.ToString())));
