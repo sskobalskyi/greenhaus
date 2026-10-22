@@ -136,10 +136,10 @@ docker compose --profile real up -d --build api
 
 ### The billing service
 
-`src/Greenhaus.Billing` implements `billing-api.yaml` on its own PostgreSQL: public plans, subscribe and cancel with a demo payment token (`...-declined` is refused, `...-renewal-fails` fails its first renewal), renewals, invoices. `Billing:Period` and `Billing:Grace` shorten time for demos. See [ADR 5](docs/adr/0005-billing-service.md).
+`src/Greenhaus.Billing` implements `billing-api.yaml` on its own PostgreSQL: public plans, subscribe and cancel with a demo payment token (`...-declined` is refused, `...-renewal-fails` fails its first renewal), renewals, invoices, and **purchase grants** from Orderflow events (`order.confirmed.v1` of $30, $80 or $150 earns 3 or 12 months of Gardener or 6 of Druid; a return or refund puts it at risk for 7 days, then it is revoked). It publishes `entitlement.changed.v1`, `grant.status_changed.v1` and `subscription.changed.v1`, which the Greenhaus API already consumes. `Billing:Period` and `Billing:Grace` shorten time for demos. See [ADR 5](docs/adr/0005-billing-service.md).
 
 ```powershell
-docker compose --profile real up --build billing   # http://localhost:8092/api/billing/v1
+docker compose --profile real up --build billing   # http://localhost:8092/api/billing/v1, with RabbitMQ
 dotnet test tests/Greenhaus.Billing.Tests          # real PostgreSQL, every response checked against the contract
 ```
 
