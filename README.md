@@ -143,6 +143,15 @@ docker compose --profile real up --build billing   # http://localhost:8092/api/b
 dotnet test tests/Greenhaus.Billing.Tests          # real PostgreSQL, every response checked against the contract
 ```
 
+### Fulfilment: from an order to devices
+
+`src/Greenhaus.Fulfilment` turns a confirmed order of kits into devices. For every kit unit it allocates a device (an id, a one-time claim token, a broker password) from `data/kit-capabilities.json` and publishes `device.allocated.v1` with hashes only. When the order ships it tells Pulse the devices can be claimed (retrying while Pulse has not registered them yet), and when the order is returned or refunded before shipping it retires them. The people who pack the boxes read the claim token, claim link and password from `GET /api/fulfilment/v1/orders/{orderId}/allocations` ([contract](contracts/openapi/fulfilment-api.yaml)); they are erased once Pulse accepts the shipment. See [ADR 6](docs/adr/0006-fulfilment-service.md).
+
+```powershell
+docker compose --profile real up --build fulfilment   # http://localhost:8093/api/fulfilment/v1, needs rabbitmq and a Pulse (PULSE_URL, PULSE_TOKEN)
+dotnet test tests/Greenhaus.Fulfilment.Tests          # real PostgreSQL and RabbitMQ, a fake Pulse, responses and events checked against the contracts
+```
+
 ### The kits in the shop
 
 `data/shop-catalog.json` lists three kits (starter module, pot kit, greenhouse kit) in the seed format of Orderflow's catalog, in English and Ukrainian. Start Orderflow with `Catalog:SeedFile` pointing at it to sell them. The prices ($30, $80, $150) match the placeholder purchase-grant thresholds of the spec. Orderflow stays generic: it knows SKUs, prices and names, not what is in the box. What is in the box is `data/kit-capabilities.json`: for each SKU the model, the sensor channels and the actuators with their hard limits and (for a heater) the declared thermal cutoff, in the shape of the Pulse device API. The fulfilment step that allocates a device for an ordered kit reads it. CI checks it against the catalog and the Pulse metric and actuator names.

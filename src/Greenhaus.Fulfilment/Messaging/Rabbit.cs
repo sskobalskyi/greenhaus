@@ -1,0 +1,36 @@
+using RabbitMQ.Client;
+
+namespace Greenhaus.Fulfilment.Messaging;
+
+public sealed class RabbitOptions
+{
+    /// <summary>Empty means messaging is off: events stay in the outbox and nothing is consumed.</summary>
+    public string? Host { get; set; }
+    public int Port { get; set; } = 5672;
+    public string User { get; set; } = "guest";
+    public string Password { get; set; } = "guest";
+    public string VirtualHost { get; set; } = "/";
+    public string Exchange { get; set; } = "integration.events";
+    public string Queue { get; set; } = "fulfilment.events";
+}
+
+// The relay and the consumer follow the ones in Greenhaus.Api (ADR 3). They are copied rather than shared: each service owns
+// its tables and its queue, and a shared project would couple their releases for about two hundred lines.
+public static class Rabbit
+{
+    /// <summary>The events fulfilment acts on.</summary>
+    public static readonly string[] Consumed = ["order.confirmed.v1", "order.shipped.v1", "order.returned.v1", "order.refunded.v1"];
+
+    public static string DeadLetterExchange(RabbitOptions o) => o.Queue + ".dlx";
+
+    public static Task<IConnection> ConnectAsync(RabbitOptions o, CancellationToken ct) =>
+        new ConnectionFactory { HostName = o.Host!, Port = o.Port, UserName = o.User, Password = o.Password, VirtualHost = o.VirtualHost, AutomaticRecoveryEnabled = true }
+            .CreateConnectionAsync(ct);
+
+    public static async Task DeclareExchangeAsync(IChannel channel, RabbitOptions o, CancellationToken ct) =>
+        await channel.ExchangeDeclareAsync(o.Exchange, ExchangeType.Topic, durable: true, cancellationToken: ct);
+
+    public static string? Text(IDictionary<string, object?>? headers, string name) => headers is not null && headers.TryGetValue(name, out var v)
+        ? v switch { byte[] bytes => System.Text.Encoding.UTF8.GetString(bytes), string s => s, _ => v?.ToString() }
+        : null;
+}

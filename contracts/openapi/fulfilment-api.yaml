@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: Greenhaus Fulfilment API
+  version: 0.1.0
+  summary: 'The packing room of the shop: the devices of an order and what is needed to set them up.'
+  description: |
+    Fulfilment allocates a device for every kit on a confirmed order (`order.confirmed.v1`) and announces it
+    (`device.allocated.v1`). It tells Pulse when the order has shipped, so the devices can be claimed
+    (`order.shipped.v1`), and retires devices that will never ship (a return or a refund before shipping).
+
+    This small API is for the people who pack the boxes. While a device is in the packing room it shows the
+    **provisioning bundle**: the claim token (and the link the set-up QR code would point to) and the broker
+    password to flash into the controller. They are shown only until Pulse has accepted the shipment, then they
+    are erased and only the facts remain. Only hashes of the secrets ever leave this service.
+
+    Callers need the realm role `fulfilment-admin`. The development mode of the service gives it to
+    everyone unless an `X-Roles` header says otherwise.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://localhost:8093/api/fulfilment/v1
+    description: Local
+security:
+  - bearerAuth: []
+paths:
+  /orders/{orderId}/allocations:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [Allocations]
+      operationId: listAllocations
+      summary: The devices allocated to an order
+      description: |
+        One entry per kit unit on the order, in SKU and position order. A device in the packing room (`allocated`)
+        carries its claim token, claim link and broker password. Any other state carries none of them.
+      responses:
+        '200':
+          description: The devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Allocation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /orders/{orderId}/allocations/retry:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [Allocations]
+      operationId: retryAllocations
+      summary: Ask again for devices Pulse did not accept
+      description: |
+        Devices in state `pulse_failed` go back to the queue of the worker that tells Pulse. Other devices are
+        left as they are. Returns the devices as they are now.
+      responses:
+        '200':
+          description: The devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Allocation' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Keycloak access token of a person with the realm role `fulfilment-admin`.
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    Forbidden:
+      description: The caller is not fulfilment staff (code `forbidden`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: No devices were allocated for this order, for example because it holds no kits
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    Problem:
+      type: object
+      required: [title, status, code]
+      properties:
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { type: string, examples: [forbidden, not_found] }
+    AllocationState:
+      type: string
+      description: |
+        `allocated`: in the packing room. `ship_requested`: the order shipped, Pulse has not yet accepted that. `shipped`:
+        Pulse accepted it, the device can be claimed. `retire_requested` and `retired`: the order was returned or refunded before
+        shipping. `pulse_failed`: Pulse refused or stayed silent, see `lastError`.
+      enum: [allocated, ship_requested, shipped, retire_requested, retired, pulse_failed]
+    Allocation:
+      type: object
+      required: [deviceId, orderId, sku, model, state, allocatedAt, claimTokenExpiresAt]
+      properties:
+        deviceId: { type: string, pattern: '^[A-Za-z0-9._-]+$' }
+        orderId: { type: string, format: uuid }
+        sku: { type: string }
+        model: { type: string }
+        state: { $ref: '#/components/schemas/AllocationState' }
+        allocatedAt: { type: string, format: date-time }
+        claimTokenExpiresAt: { type: string, format: date-time }
+        shippedAt: { type: string, format: date-time }
+        lastError:
+          type: string
+          description: The last answer of Pulse that was not accepted, as a code and a status. Present while a call is being retried or after it failed.
+        claimToken:
+          type: string
+          description: The one-time token for the claim. Present only in state `allocated`.
+        claimUrl:
+          type: string
+          format: uri
+          description: The claim page of the web app with the device and the token, what a printed QR code would encode. Present only in state `allocated`.
+        credential:
+          type: string
+          description: The broker password to flash into the controller. Present only in state `allocated`.

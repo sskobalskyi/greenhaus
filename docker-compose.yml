@@ -103,6 +103,48 @@ services:
       - "8092:8080"
     restart: unless-stopped
 
+  fulfilment-db:
+    image: postgres:17-alpine
+    profiles: [real]
+    environment:
+      POSTGRES_USER: fulfilment
+      POSTGRES_PASSWORD: fulfilment
+      POSTGRES_DB: fulfilment
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fulfilment"]
+      interval: 3s
+      retries: 20
+    volumes:
+      - fulfilment-db:/var/lib/postgresql/data
+
+  # The fulfilment service on :8093: allocates devices for ordered kits, tells Pulse when they ship, and serves the packing bundle.
+  fulfilment:
+    build:
+      context: .
+      dockerfile: src/Greenhaus.Fulfilment/Dockerfile
+    profiles: [real]
+    depends_on:
+      fulfilment-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Fulfilment: Host=fulfilment-db;Database=fulfilment;Username=fulfilment;Password=fulfilment
+      Auth__Mode: Development
+      RabbitMq__Host: rabbitmq
+      RabbitMq__User: guest
+      RabbitMq__Password: guest
+      Web__BaseUrl: ${WEB_URL:-http://localhost:5174}
+      Pulse__BaseUrl: ${PULSE_URL:-http://host.docker.internal:5080/api/pulse/v2}
+      Pulse__StaticToken: ${PULSE_TOKEN:-}
+      Pulse__TokenUrl: ${PULSE_TOKEN_URL:-}
+      Pulse__ClientId: ${PULSE_CLIENT_ID:-}
+      Pulse__ClientSecret: ${PULSE_CLIENT_SECRET:-}
+    ports:
+      - "8093:8080"
+    restart: unless-stopped
+
 volumes:
   greenhaus-db:
   billing-db:
+  fulfilment-db:
