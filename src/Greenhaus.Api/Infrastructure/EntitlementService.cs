@@ -29,7 +29,8 @@ public sealed class EntitlementService(GreenhausDbContext db, IOptions<Entitleme
         var tier = await TierOfAsync(userId, ct);
         var row = await db.Entitlements.AsNoTracking().FirstOrDefaultAsync(e => e.UserId == userId, ct);
         var sources = new List<EntitlementSourceDto>();
-        if (row is not null && (row.ValidUntil is null || row.ValidUntil > clock.GetUtcNow()))
+        // The free tier is not a source: when billing announces that a grant or subscription ended, there is nothing to list.
+        if (row is not null && row.Tier != Tier.Novice && (row.ValidUntil is null || row.ValidUntil > clock.GetUtcNow()))
         {
             sources.Add(new EntitlementSourceDto
             {
