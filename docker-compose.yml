@@ -64,5 +64,36 @@ services:
       - "8091:8080"
     restart: unless-stopped
 
+  billing-db:
+    image: postgres:17-alpine
+    profiles: [real]
+    environment:
+      POSTGRES_USER: billing
+      POSTGRES_PASSWORD: billing
+      POSTGRES_DB: billing
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U billing"]
+      interval: 3s
+      retries: 20
+    volumes:
+      - billing-db:/var/lib/postgresql/data
+
+  # The real billing service, same contract as the mock's billing part, on :8092 with its own database.
+  billing:
+    build:
+      context: .
+      dockerfile: src/Greenhaus.Billing/Dockerfile
+    profiles: [real]
+    depends_on:
+      billing-db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Billing: Host=billing-db;Database=billing;Username=billing;Password=billing
+      Auth__Mode: Development
+    ports:
+      - "8092:8080"
+    restart: unless-stopped
+
 volumes:
   greenhaus-db:
+  billing-db:
