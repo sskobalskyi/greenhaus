@@ -27,7 +27,7 @@ public static class BillingEndpoints
                 : Problems.Fail(404, "no_subscription", "No subscription");
         });
 
-        api.MapPost("/subscription", async (SubscribeRequest body, HttpContext http, BillingDbContext db, BillingProcessor processor, Microsoft.Extensions.Options.IOptions<BillingOptions> options, TimeProvider clock, CancellationToken ct) =>
+        api.MapPost("/subscription", async (SubscribeRequest body, HttpContext http, BillingDbContext db, BillingProcessor processor, EventPublisher events, EntitlementService entitlements, Microsoft.Extensions.Options.IOptions<BillingOptions> options, TimeProvider clock, CancellationToken ct) =>
         {
             if (body.Tier is null || string.IsNullOrWhiteSpace(body.PaymentMethodToken))
                 return Problems.Invalid("A tier and a payment method token are required");
@@ -59,7 +59,12 @@ public static class BillingEndpoints
             existing.CreatedAt = now;
             existing.CurrentPeriodEnd = now + options.Value.Period;
             db.Invoices.Add(BillingProcessor.NewInvoice(user, now, tier, "paid"));
+            events.SubscriptionChanged(user, tier, "active");
+            await using var tx = await db.Database.BeginTransactionAsync(ct);
             await db.SaveChangesAsync(ct);
+            await entitlements.RecomputeAsync(user, "subscribed", ct);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
             return Results.Json(existing.ToDto(), statusCode: 201);
         });
 

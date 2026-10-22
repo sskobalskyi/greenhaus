@@ -1,3 +1,4 @@
+using Greenhaus.Billing.Messaging;
 using Greenhaus.Billing.Persistence;
 using Greenhaus.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -12,23 +13,36 @@ public sealed record Change(string UserId, string Reason, Guid? GrantId = null);
 /// Brings billing up to the clock: renews subscriptions or ends them, and ends grants whose grace or validity ran out.
 /// The same code runs for one user when they call the API (so an answer is never stale) and for everyone from the background job.
 /// </summary>
-public sealed class BillingProcessor(BillingDbContext db, IOptions<BillingOptions> options, TimeProvider clock)
+public sealed class BillingProcessor(BillingDbContext db, IOptions<BillingOptions> options, TimeProvider clock, EventPublisher events, EntitlementService entitlements)
 {
     public async Task<List<Change>> AdvanceAsync(string? userId, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
-        var changes = new List<Change>();
         var o = options.Value;
 
-        var subscriptions = db.Subscriptions.Where(s => s.Status != "cancelled" && s.CurrentPeriodEnd <= now);
-        if (userId is not null) subscriptions = subscriptions.Where(s => s.UserId == userId);
-        foreach (var sub in await subscriptions.ToListAsync(ct))
+        var dueSubscriptions = db.Subscriptions.Where(s => s.Status != "cancelled" && s.CurrentPeriodEnd <= now);
+        var dueGrants = db.Grants.Where(g => (g.Status == "at_risk" && g.GraceEndsAt <= now) || (g.Status == "active" && g.ValidUntil <= now));
+        if (userId is not null)
+        {
+            dueSubscriptions = dueSubscriptions.Where(s => s.UserId == userId);
+            dueGrants = dueGrants.Where(g => g.UserId == userId);
+        }
+        var subscriptions = await dueSubscriptions.ToListAsync(ct);
+        var grants = await dueGrants.ToListAsync(ct);
+        var changes = new List<Change>();
+        if (subscriptions.Count == 0 && grants.Count == 0) return changes;
+
+        // The state change, the events it causes and the new entitlement are saved together, or not at all.
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+
+        foreach (var sub in subscriptions)
         {
             while (sub.Status != "cancelled" && sub.CurrentPeriodEnd <= now)
             {
                 if (sub.CancelAtPeriodEnd)
                 {
                     sub.Status = "cancelled";
+                    events.SubscriptionChanged(sub.UserId, sub.Tier, "cancelled");
                     changes.Add(new Change(sub.UserId, "cancelled"));
                     break;
                 }
@@ -39,24 +53,30 @@ public sealed class BillingProcessor(BillingDbContext db, IOptions<BillingOption
                 sub.CurrentPeriodEnd += o.Period;
                 if (declined)
                 {
+                    events.SubscriptionChanged(sub.UserId, sub.Tier, "past_due");
                     changes.Add(new Change(sub.UserId, "payment_failed"));
                     break;
                 }
+                changes.Add(new Change(sub.UserId, "subscribed"));
             }
         }
 
-        var grants = db.Grants.Where(g => (g.Status == "at_risk" && g.GraceEndsAt <= now) || (g.Status == "active" && g.ValidUntil <= now));
-        if (userId is not null) grants = grants.Where(g => g.UserId == userId);
-        foreach (var grant in await grants.ToListAsync(ct))
+        foreach (var grant in grants)
         {
-            changes.Add(new Change(grant.UserId, grant.Status == "at_risk" ? "grant_revoked" : "grant_expired", grant.Id));
+            var reason = grant.Status == "at_risk" ? "grant_revoked" : "grant_expired";
             grant.Status = "revoked";
+            events.GrantChanged(grant);
+            BillingTelemetry.GrantsChanged.Add(1, new KeyValuePair<string, object?>("status", "revoked"));
+            changes.Add(new Change(grant.UserId, reason, grant.Id));
         }
+        await db.SaveChangesAsync(ct);
 
-        if (changes.Count > 0 || db.ChangeTracker.HasChanges()) await db.SaveChangesAsync(ct);
+        foreach (var user in changes.Select(c => c.UserId).Distinct())
+            await entitlements.RecomputeAsync(user, changes.Last(c => c.UserId == user).Reason, ct);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return changes;
     }
-
     public static InvoiceEntity NewInvoice(string userId, DateTimeOffset at, Tier tier, string status) =>
         new() { Id = Guid.NewGuid(), UserId = userId, IssuedAt = at, Amount = BillingRules.PricePerMonth(tier), Currency = "USD", Status = status };
 }

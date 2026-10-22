@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Greenhaus.Billing.Auth;
 using Greenhaus.Billing.Features;
 using Greenhaus.Billing.Infrastructure;
+using Greenhaus.Billing.Messaging;
 using Greenhaus.Billing.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +60,14 @@ public partial class Program
         builder.Services.Configure<BillingOptions>(configuration.GetSection("Billing"));
         builder.Services.TryAddSingletonClock();
         builder.Services.AddScoped<BillingProcessor>();
+        builder.Services.AddScoped<EventPublisher>();
+        builder.Services.AddScoped<EntitlementService>();
+        builder.Services.Configure<RabbitOptions>(configuration.GetSection("RabbitMq"));
+        if (!string.IsNullOrEmpty(configuration["RabbitMq:Host"]))
+        {
+            builder.Services.AddHostedService<OutboxRelay>();
+            builder.Services.AddHostedService<EventConsumer>();
+        }
         if (configuration.GetValue("Billing:RunTicker", true)) builder.Services.AddHostedService<BillingTicker>();
 
         // The browser app calls billing directly in local development. Tokens travel in a header, not cookies.
@@ -72,8 +81,8 @@ public partial class Program
         {
             builder.Services.AddOpenTelemetry()
                 .ConfigureResource(r => r.AddService("greenhaus-billing"))
-                .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource("Npgsql").AddOtlpExporter())
-                .WithMetrics(m => m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddOtlpExporter());
+                .WithTracing(t => t.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddSource("Npgsql", BillingTelemetry.Name).AddOtlpExporter())
+                .WithMetrics(m => m.AddAspNetCoreInstrumentation().AddHttpClientInstrumentation().AddRuntimeInstrumentation().AddMeter(BillingTelemetry.Name).AddOtlpExporter());
         }
 
         var app = builder.Build();
