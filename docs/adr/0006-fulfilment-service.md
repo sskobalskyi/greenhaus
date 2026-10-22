@@ -17,6 +17,7 @@ A bought kit has to become devices: an identity, a one-time claim token for the 
 
 ## Consequences
 - Greenhaus is the owner of "what is in the box", so Orderflow needs nothing but its order events, and Pulse nothing but `device.allocated.v1` and the ship and retire calls it already has.
-- Until Pulse has a consumer for `device.allocated.v1`, a shipped order ends `pulse_failed`: the service shows that instead of hiding it. The Greenhaus API already remembers which order a device was sold in, so `device.claimed.v1` carries it (checked against a running stack).
+- Pulse registers a device from `device.allocated.v1` when its events are switched on (`Events__Enabled`, its `docker-compose.events.yml`). Without that, a shipped order ends `pulse_failed` and the service shows it instead of hiding it. The Greenhaus API already remembers which order a device was sold in, so `device.claimed.v1` carries it.
+- Checked live against Pulse `main` with its Keycloak and RabbitMQ: allocation, registration in Pulse (state `allocated`, all channels, actuators and the heater's thermal cutoff), shipping (`shipped`), a claim in Pulse with the token from the packing bundle (so the token hash format is the one Pulse verifies), and retirement of a device whose order was returned before shipping.
 - The secrets sit in the database in plain text while a device is in the packing room. That is the price of showing them to the person who flashes the controller. A real deployment would encrypt them and keep the window short.
 - Tests run against a real PostgreSQL and RabbitMQ with a fake Pulse and a fake clock, and check the HTTP responses and the published events against their contracts. A separate test pins the wire format of the Pulse calls.
