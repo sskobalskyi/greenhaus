@@ -10,7 +10,8 @@
     "preview": "vite preview --port 5174",
     "typecheck": "tsc -p tsconfig.app.json --noEmit",
     "lint": "oxlint",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "e2e:auth": "playwright test -c playwright.auth.config.ts"
   },
   "dependencies": {
     "@greenhaus/ui": "*",
