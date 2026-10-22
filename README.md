@@ -137,7 +137,7 @@ dotnet test tests/Greenhaus.Billing.Tests          # real PostgreSQL, every resp
 
 ### The kits in the shop
 
-`data/shop-catalog.json` lists three kits (starter module, pot kit, greenhouse kit) in the seed format of Orderflow's catalog, in English and Ukrainian. Start Orderflow with `Catalog:SeedFile` pointing at it to sell them. The prices ($30, $80, $150) match the placeholder purchase-grant thresholds of the spec. Orderflow stays generic: it knows SKUs, prices and names, not what is in the box.
+`data/shop-catalog.json` lists three kits (starter module, pot kit, greenhouse kit) in the seed format of Orderflow's catalog, in English and Ukrainian. Start Orderflow with `Catalog:SeedFile` pointing at it to sell them. The prices ($30, $80, $150) match the placeholder purchase-grant thresholds of the spec. Orderflow stays generic: it knows SKUs, prices and names, not what is in the box. What is in the box is `data/kit-capabilities.json`: for each SKU the model, the sensor channels and the actuators with their hard limits and (for a heater) the declared thermal cutoff, in the shape of the Pulse device API. The fulfilment step that allocates a device for an ordered kit reads it. CI checks it against the catalog and the Pulse metric and actuator names.
 
 ## Roadmap
 

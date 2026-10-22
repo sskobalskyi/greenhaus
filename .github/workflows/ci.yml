@@ -37,6 +37,17 @@ jobs:
           jq -e 'length >= 3 and ([.[].sku] | length == (unique | length))' data/shop-catalog.json
           jq -e 'all(.[]; .price > 0 and (.currency | test("^[A-Z]{3}$")) and (.translations.en.name | length > 0) and (.translations.uk.name | length > 0))' data/shop-catalog.json
 
+      - name: Check the kit capabilities
+        run: |
+          # Every product has a device description, and each follows the Pulse device API.
+          jq -e --slurpfile shop data/shop-catalog.json '[$shop[0][].sku] - (keys) == []' data/kit-capabilities.json
+          jq -e 'all(.[]; (.model | length > 0)
+            and ([.channels[].id] | length == (unique | length))
+            and all(.channels[]; (.id | test("^[A-Za-z0-9._-]+$")) and (.metric | IN("temperature","air_humidity","soil_moisture","ph","light","airflow","tank_level","overflow","flow")))
+            and all(.actuators[]; (.id | test("^[A-Za-z0-9._-]+$")) and (.kind | IN("pump","heater","lamp","fan","humidifier"))
+              and .hardLimits.maxRunSeconds >= 1 and .hardLimits.maxRunSeconds <= .hardLimits.dailyCapSeconds and .hardLimits.minIntervalSeconds >= 0
+              and (if .kind == "heater" then .thermalCutoff == true else true end)))' data/kit-capabilities.json
+
   mock-server:
     name: Mock server and contract tests
     runs-on: ubuntu-latest

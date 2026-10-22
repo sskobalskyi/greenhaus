@@ -1,0 +1,39 @@
+{
+  "GH-STARTER-01": {
+    "model": "Greenhaus Starter Module S1",
+    "channels": [
+      { "id": "soil", "metric": "soil_moisture", "unit": "%" },
+      { "id": "temp", "metric": "temperature", "unit": "C" }
+    ],
+    "actuators": []
+  },
+  "GH-POT-KIT-01": {
+    "model": "Greenhaus Pot Controller P1",
+    "channels": [
+      { "id": "soil", "metric": "soil_moisture", "unit": "%" },
+      { "id": "temp", "metric": "temperature", "unit": "C" },
+      { "id": "light", "metric": "light", "unit": "lux" },
+      { "id": "tank", "metric": "tank_level", "unit": "%" }
+    ],
+    "actuators": [
+      { "id": "pump", "kind": "pump", "hardLimits": { "maxRunSeconds": 60, "minIntervalSeconds": 600, "dailyCapSeconds": 300 } }
+    ]
+  },
+  "GH-GREENHOUSE-01": {
+    "model": "Greenhaus Greenhouse Controller G1",
+    "channels": [
+      { "id": "soil", "metric": "soil_moisture", "unit": "%" },
+      { "id": "temp", "metric": "temperature", "unit": "C" },
+      { "id": "humidity", "metric": "air_humidity", "unit": "%" },
+      { "id": "airflow", "metric": "airflow", "unit": "m/s" },
+      { "id": "light", "metric": "light", "unit": "lux" },
+      { "id": "tank", "metric": "tank_level", "unit": "%" }
+    ],
+    "actuators": [
+      { "id": "pump", "kind": "pump", "hardLimits": { "maxRunSeconds": 60, "minIntervalSeconds": 600, "dailyCapSeconds": 300 } },
+      { "id": "heater", "kind": "heater", "thermalCutoff": true, "hardLimits": { "maxRunSeconds": 1800, "minIntervalSeconds": 300, "dailyCapSeconds": 14400 } },
+      { "id": "lamp", "kind": "lamp", "hardLimits": { "maxRunSeconds": 21600, "minIntervalSeconds": 60, "dailyCapSeconds": 64800 } },
+      { "id": "fan", "kind": "fan", "hardLimits": { "maxRunSeconds": 3600, "minIntervalSeconds": 0, "dailyCapSeconds": 43200 } }
+    ]
+  }
+}
