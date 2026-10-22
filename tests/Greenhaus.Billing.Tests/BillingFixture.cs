@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Testcontainers.PostgreSql;
+using Testcontainers.RabbitMq;
 
 namespace Greenhaus.Billing.Tests;
 
@@ -12,21 +13,29 @@ namespace Greenhaus.Billing.Tests;
 public sealed class BillingFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder().WithImage("postgres:17-alpine").Build();
+    private readonly RabbitMqContainer _rabbit = new RabbitMqBuilder().WithImage("rabbitmq:4-alpine").Build();
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
 
     public FakeTimeProvider Clock { get; } = new(new DateTimeOffset(2026, 10, 22, 12, 0, 0, TimeSpan.Zero));
     public OpenApiContract Contract { get; private set; } = null!;
     public ContractClient Client { get; private set; } = null!;
+    public AsyncApiContract Events { get; private set; } = null!;
+    public string RabbitHost => _rabbit.Hostname;
+    public int RabbitPort => _rabbit.GetMappedPublicPort(5672);
 
     public async Task InitializeAsync()
     {
-        await _postgres.StartAsync();
+        await Task.WhenAll(_postgres.StartAsync(), _rabbit.StartAsync());
         var root = FindRepositoryRoot();
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
             b.UseSetting("ConnectionStrings:Billing", _postgres.GetConnectionString());
             b.UseSetting("Auth:Mode", "Development");
+            b.UseSetting("RabbitMq:Host", _rabbit.Hostname);
+            b.UseSetting("RabbitMq:Port", _rabbit.GetMappedPublicPort(5672).ToString());
+            b.UseSetting("RabbitMq:User", RabbitMqBuilder.DefaultUsername);
+            b.UseSetting("RabbitMq:Password", RabbitMqBuilder.DefaultPassword);
             // Tests move the clock and ask for the answer, so the background job would only get in the way.
             b.UseSetting("Billing:RunTicker", "false");
             b.ConfigureTestServices(services => services.AddSingleton<TimeProvider>(Clock));
@@ -34,6 +43,7 @@ public sealed class BillingFixture : IAsyncLifetime
         _client = _factory.CreateClient();
         Contract = new OpenApiContract(Path.Combine(root, "contracts", "openapi", "billing-api.yaml"));
         Client = new ContractClient(_client, Contract);
+        Events = new AsyncApiContract(Path.Combine(root, "contracts", "asyncapi", "integration-events.yaml"));
     }
 
     public async Task DisposeAsync()
@@ -41,6 +51,7 @@ public sealed class BillingFixture : IAsyncLifetime
         _client?.Dispose();
         if (_factory is not null) await _factory.DisposeAsync();
         await _postgres.DisposeAsync();
+        await _rabbit.DisposeAsync();
     }
 
     public static string NewUser() => "user-" + Guid.NewGuid().ToString("N")[..12];
