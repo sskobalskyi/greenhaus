@@ -41,3 +41,35 @@ public class GrantEntity
     public DateTimeOffset ValidUntil { get; set; }
     public DateTimeOffset? GraceEndsAt { get; set; }
 }
+
+/// <summary>The entitlement last announced for a user, so a change is announced once and with the right previous tier.</summary>
+public class EntitlementStateEntity
+{
+    public required string UserId { get; set; }
+    public Tier Tier { get; set; }
+    public DateTimeOffset? Until { get; set; }
+    /// <summary>The status of the source the tier comes from: "active", "past_due" or "at_risk". Null on the free tier.</summary>
+    public string? Status { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+}
+
+/// <summary>An integration event waiting to be published, written in the same transaction as the change that caused it.</summary>
+public class OutboxMessageEntity
+{
+    public Guid Id { get; set; }
+    public required string Type { get; set; }
+    public required string Payload { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? PublishedAt { get; set; }
+    public int Attempts { get; set; }
+    /// <summary>W3C trace context of the request that caused the event, so a trace continues in the consumers.</summary>
+    public string? Traceparent { get; set; }
+}
+
+/// <summary>A message already handled by a consumer. The pair is unique, so a redelivery is recognised and skipped.</summary>
+public class InboxMessageEntity
+{
+    public Guid MessageId { get; set; }
+    public required string Consumer { get; set; }
+    public DateTimeOffset ProcessedAt { get; set; }
+}

@@ -23,6 +23,31 @@ namespace Greenhaus.Billing.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Greenhaus.Billing.Persistence.EntitlementStateEntity", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Tier")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("Until")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("entitlement_states", "billing");
+                });
+
             modelBuilder.Entity("Greenhaus.Billing.Persistence.GrantEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -65,6 +90,23 @@ namespace Greenhaus.Billing.Persistence.Migrations
                     b.ToTable("grants", "billing");
                 });
 
+            modelBuilder.Entity("Greenhaus.Billing.Persistence.InboxMessageEntity", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Consumer")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("MessageId", "Consumer");
+
+                    b.ToTable("inbox", "billing");
+                });
+
             modelBuilder.Entity("Greenhaus.Billing.Persistence.InvoiceEntity", b =>
                 {
                     b.Property<Guid>("Id")
@@ -97,6 +139,41 @@ namespace Greenhaus.Billing.Persistence.Migrations
                     b.HasIndex("UserId", "IssuedAt");
 
                     b.ToTable("invoices", "billing");
+                });
+
+            modelBuilder.Entity("Greenhaus.Billing.Persistence.OutboxMessageEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Traceparent")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PublishedAt");
+
+                    b.ToTable("outbox", "billing");
                 });
 
             modelBuilder.Entity("Greenhaus.Billing.Persistence.SubscriptionEntity", b =>
