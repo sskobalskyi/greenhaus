@@ -65,6 +65,21 @@ jobs:
       - name: Build the container image
         run: docker build -f src/Greenhaus.Api/Dockerfile -t greenhaus-api .
 
+  billing:
+    name: Billing service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+      - name: Domain rules
+        run: dotnet test tests/Greenhaus.Domain.Tests --configuration Release
+      - name: Service against a real PostgreSQL and the contract
+        run: dotnet test tests/Greenhaus.Billing.Tests --configuration Release
+      - name: Build the container image
+        run: docker build -f src/Greenhaus.Billing/Dockerfile -t greenhaus-billing .
+
   ui:
     name: Design system and Storybook
     runs-on: ubuntu-latest

@@ -126,6 +126,15 @@ $env:PULSE_CLIENT_ID = "pulse-service"; $env:PULSE_CLIENT_SECRET = "pulse-dev-se
 docker compose --profile real up -d --build api
 ```
 
+### The billing service
+
+`src/Greenhaus.Billing` implements `billing-api.yaml` on its own PostgreSQL: public plans, subscribe and cancel with a demo payment token (`...-declined` is refused, `...-renewal-fails` fails its first renewal), renewals, invoices. `Billing:Period` and `Billing:Grace` shorten time for demos. See [ADR 5](docs/adr/0005-billing-service.md).
+
+```powershell
+docker compose --profile real up --build billing   # http://localhost:8092/api/billing/v1
+dotnet test tests/Greenhaus.Billing.Tests          # real PostgreSQL, every response checked against the contract
+```
+
 ### The kits in the shop
 
 `data/shop-catalog.json` lists three kits (starter module, pot kit, greenhouse kit) in the seed format of Orderflow's catalog, in English and Ukrainian. Start Orderflow with `Catalog:SeedFile` pointing at it to sell them. The prices ($30, $80, $150) match the placeholder purchase-grant thresholds of the spec. Orderflow stays generic: it knows SKUs, prices and names, not what is in the box.
