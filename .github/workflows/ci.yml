@@ -125,6 +125,19 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real down
           docker compose down
 
+  fulfilment:
+    name: Fulfilment service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+      - name: Service against a real PostgreSQL and RabbitMQ, the contracts and a fake Pulse
+        run: dotnet test tests/Greenhaus.Fulfilment.Tests --configuration Release
+      - name: Build the container image
+        run: docker build -f src/Greenhaus.Fulfilment/Dockerfile -t greenhaus-fulfilment .
+
   ui:
     name: Design system and Storybook
     runs-on: ubuntu-latest
