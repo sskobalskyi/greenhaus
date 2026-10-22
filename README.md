@@ -30,7 +30,7 @@ contracts/asyncapi/    integration events (RabbitMQ) and device topics (MQTT)
 mock-server/           .NET mock of the Greenhaus API with contract tests ([details](mock-server/README.md))
 packages/ui/           design system and Storybook on shadcn/ui ([details](packages/ui/README.md))
 apps/web/              the product app ([details](apps/web/README.md))
-data/                  curated data, such as the species catalog
+data/                  curated data: the species catalog and the kits for the shop (`shop-catalog.json`)
 docs/adr/              architecture decision records
 ```
 
@@ -125,6 +125,10 @@ $env:PULSE_TOKEN_URL = "http://host.docker.internal:8180/realms/pulse/protocol/o
 $env:PULSE_CLIENT_ID = "pulse-service"; $env:PULSE_CLIENT_SECRET = "pulse-dev-secret"
 docker compose --profile real up -d --build api
 ```
+
+### The kits in the shop
+
+`data/shop-catalog.json` lists three kits (starter module, pot kit, greenhouse kit) in the seed format of Orderflow's catalog, in English and Ukrainian. Start Orderflow with `Catalog:SeedFile` pointing at it to sell them. The prices ($30, $80, $150) match the placeholder purchase-grant thresholds of the spec. Orderflow stays generic: it knows SKUs, prices and names, not what is in the box.
 
 ## Roadmap
 

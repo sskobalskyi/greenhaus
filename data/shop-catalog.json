@@ -1,0 +1,29 @@
+[
+  {
+    "sku": "GH-STARTER-01",
+    "price": 30.00,
+    "currency": "USD",
+    "translations": {
+      "en": { "name": "Greenhaus starter module", "description": "A controller with a soil moisture and a temperature sensor for one pot. Watering is manual or by notification." },
+      "uk": { "name": "Стартовий модуль Greenhaus", "description": "Контролер із датчиками вологості ґрунту та температури для одного горщика. Поливання вручну або за сповіщенням." }
+    }
+  },
+  {
+    "sku": "GH-POT-KIT-01",
+    "price": 80.00,
+    "currency": "USD",
+    "translations": {
+      "en": { "name": "Greenhaus pot kit", "description": "Controller, soil moisture, temperature and light sensors, a pump with a water tank sensor and tubing. Automatic watering for one pot." },
+      "uk": { "name": "Набір Greenhaus для горщика", "description": "Контролер, датчики вологості ґрунту, температури й освітлення, помпа з датчиком рівня води в баку та трубки. Автоматичний полив одного горщика." }
+    }
+  },
+  {
+    "sku": "GH-GREENHOUSE-01",
+    "price": 150.00,
+    "currency": "USD",
+    "translations": {
+      "en": { "name": "Greenhaus greenhouse kit", "description": "Controller with sensors for air humidity and airflow too, a pump, a heater with a hardware thermal cutoff, a grow lamp and a fan. For a bed or a balcony greenhouse." },
+      "uk": { "name": "Набір Greenhaus для теплиці", "description": "Контролер із датчиками вологості повітря та руху повітря, помпа, обігрівач з апаратним тепловим запобіжником, лампа для рослин і вентилятор. Для грядки чи балконної теплиці." }
+    }
+  }
+]
