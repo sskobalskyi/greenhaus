@@ -51,6 +51,7 @@ public partial class Program
                     o.RequireHttpsMetadata = auth.RequireHttpsMetadata;
                     o.TokenValidationParameters.ValidateAudience = auth.Audience is not null;
                     o.TokenValidationParameters.ValidAudience = auth.Audience;
+                    if (!string.IsNullOrEmpty(auth.Issuer)) o.TokenValidationParameters.ValidIssuer = auth.Issuer;
                     o.MapInboundClaims = false;
                 });
         }
@@ -82,7 +83,7 @@ public partial class Program
             builder.Services.AddHostedService<EventConsumer>();
         }
         // The browser app calls the API directly in local development. Tokens travel in a header, not cookies, so no credentials are allowed.
-        var origins = configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173", "http://localhost:4173"];
+        var origins = configuration.GetSection("Cors:Origins").Get<string[]>() ?? ["http://localhost:5173", "http://localhost:5174", "http://localhost:4173"];
         builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(origins).AllowAnyHeader().AllowAnyMethod()));
         builder.Services.AddProblemDetails();
         builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");

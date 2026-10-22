@@ -102,6 +102,17 @@ dotnet test tests/Greenhaus.Api.Tests          # real PostgreSQL and RabbitMQ th
 
 Locally the service runs with `Auth__Mode=Development`, which trusts an `X-User-Id` header. Production-style use validates Keycloak tokens (`Auth__Authority`, `Auth__Audience`). Controllers are linked, read and commanded through Pulse's device API (`Pulse__BaseUrl`, with a client-credentials token or `Pulse__StaticToken` for local runs). Claiming a controller creates its sensors and actuators, tightens defaults inside the controller's hard limits, and syncs alert rules to Pulse whenever requirements change. Events go through RabbitMQ (`RabbitMq__Host`): the outbox is published with confirms, and entitlement, allocation, retirement and command-result events are consumed idempotently. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to export traces and metrics.
 
+### Real sign-in with Keycloak
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real up -d --build api keycloak
+$env:VITE_OIDC_AUTHORITY = "http://localhost:8181/realms/greenhaus"; $env:VITE_MOCK = "false"
+$env:VITE_API_BASE = "http://localhost:8091/api/greenhaus/v1"
+npm run dev -w @greenhaus/web   # http://localhost:5174
+```
+
+The app sends a signed-out person to Keycloak (in the app's language), where anyone can register (or use `demo` / `demo`). The API validates the token's issuer and the audience `greenhaus-api`, and `/me` is created from the token on the first call. Sign-out ends the Keycloak session. See [ADR 4](docs/adr/0004-sign-in.md).
+
 ### Against a live Pulse
 
 Checked against Pulse `main` (device registry, JWT, channels) with its Keycloak: Greenhaus asks for a client-credentials token of `pulse-service` and claims a shipped device, reads its state and latest readings, and stores calibration. Rules and commands are in the Pulse contract but not in Pulse yet, so syncing alert rules and sending run or kill-switch commands answers `pulse_not_supported`: the pot's own data stays correct, a run is refused with 503 and the rules follow when Pulse offers them.

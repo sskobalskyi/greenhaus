@@ -1,4 +1,5 @@
 import { apiBase, type Tier } from '@greenhaus/ui'
+import { accessToken } from '~/auth/auth'
 
 /** A problem document from the API, with the stable code the interface translates. */
 export class ApiError extends Error {
@@ -47,6 +48,8 @@ export async function api<T>(path: string, options: { method?: string; json?: un
   const headers: Record<string, string> = {}
   const tier = mockTier()
   if (tier) headers['X-Mock-Tier'] = tier
+  const token = await accessToken()
+  if (token) headers.Authorization = `Bearer ${token}`
   if (options.json !== undefined) headers['Content-Type'] = 'application/json'
 
   const response = await fetch(`${options.base ?? apiBase}${path}`, {

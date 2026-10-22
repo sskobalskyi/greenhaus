@@ -1,0 +1,32 @@
+# Real sign-in instead of the development header:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real up -d --build api keycloak
+#
+# Keycloak: http://localhost:8181 (admin / admin). Anyone can register; the user `demo` (password `demo`) exists.
+# The web app picks Keycloak up with VITE_OIDC_AUTHORITY=http://localhost:8181/realms/greenhaus. Local use only.
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    profiles: [real]
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Tokens carry the public address even when the API reaches Keycloak through the service name.
+      KC_HOSTNAME: http://localhost:8181
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+    ports:
+      - "8181:8080"
+    volumes:
+      - ./auth/greenhaus-realm.json:/opt/keycloak/data/import/greenhaus-realm.json:ro
+
+  api:
+    environment:
+      Auth__Mode: Keycloak
+      Auth__Authority: http://keycloak:8080/realms/greenhaus
+      Auth__Issuer: http://localhost:8181/realms/greenhaus
+      Auth__Audience: greenhaus-api
+      Auth__RequireHttpsMetadata: "false"
+    depends_on:
+      - keycloak

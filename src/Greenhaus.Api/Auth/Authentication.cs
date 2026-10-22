@@ -11,6 +11,8 @@ public sealed class AuthOptions
     public string Mode { get; set; } = "Keycloak";
     public string? Authority { get; set; }
     public string? Audience { get; set; }
+    /// <summary>The issuer tokens carry, when it differs from the authority the service reaches Keycloak at (inside Docker, for example).</summary>
+    public string? Issuer { get; set; }
     public bool RequireHttpsMetadata { get; set; } = true;
 }
 
