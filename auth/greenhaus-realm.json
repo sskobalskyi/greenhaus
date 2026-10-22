@@ -1,0 +1,60 @@
+{
+  "realm": "greenhaus",
+  "displayName": "Greenhaus",
+  "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "sslRequired": "none",
+  "internationalizationEnabled": true,
+  "supportedLocales": ["en", "uk"],
+  "defaultLocale": "en",
+  "clients": [
+    {
+      "clientId": "greenhaus-web",
+      "name": "Greenhaus web app",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:5174/*", "http://localhost:4173/*"],
+      "webOrigins": ["http://localhost:5174", "http://localhost:4173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5174/*##http://localhost:4173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "greenhaus-api audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "greenhaus-api",
+            "id.token.claim": "false",
+            "access.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "greenhaus-api",
+      "name": "Greenhaus API",
+      "enabled": true,
+      "bearerOnly": true
+    }
+  ],
+  "users": [
+    {
+      "username": "demo",
+      "email": "demo@greenhaus.local",
+      "firstName": "Demo",
+      "lastName": "Gardener",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "demo", "temporary": false }]
+    }
+  ]
+}

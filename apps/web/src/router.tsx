@@ -1,8 +1,10 @@
 import { createBrowserRouter } from 'react-router'
 import { AppLayout } from '~/layout/app-layout'
+import { AuthCallbackPage } from '~/pages/auth-callback-page'
 
 // Pages load on demand so the first screen stays small.
 export const router = createBrowserRouter([
+  { path: '/auth/callback', element: <AuthCallbackPage /> },
   {
     path: '/',
     element: <AppLayout />,

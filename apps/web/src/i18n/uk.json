@@ -2,6 +2,7 @@
   "app": {
     "name": "Greenhaus",
     "nav": { "pots": "Мої горщики", "plans": "Плани", "guide": "Посібник зі встановлення" },
+    "auth": { "signIn": "Увійти", "signOut": "Вийти", "signingIn": "Переходимо до входу...", "failed": "Не вдалося увійти. Спробуйте ще раз." },
     "mockTier": "Тир у моку",
     "mockTierLabel": "Мок:",
     "loadFailed": "Не вдалося завантажити. API запущено? Запустіть мок командою: docker compose up mock",

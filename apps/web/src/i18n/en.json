@@ -2,6 +2,7 @@
   "app": {
     "name": "Greenhaus",
     "nav": { "pots": "My pots", "plans": "Plans", "guide": "Set-up guide" },
+    "auth": { "signIn": "Sign in", "signOut": "Sign out", "signingIn": "Taking you to sign in...", "failed": "Signing in did not work. Please try again." },
     "mockTier": "Mock tier",
     "mockTierLabel": "Mock:",
     "loadFailed": "Could not load this. Is the API running? Start the mock with: docker compose up mock",

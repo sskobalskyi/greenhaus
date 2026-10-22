@@ -15,6 +15,7 @@
   "dependencies": {
     "@greenhaus/ui": "*",
     "@tanstack/react-query": "^5.90.0",
+    "oidc-client-ts": "^3.4.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router": "^7.9.0"

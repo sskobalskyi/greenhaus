@@ -1,15 +1,39 @@
 import { Badge, LanguageSwitcher, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, ThemeToggle, type Tier } from '@greenhaus/ui'
 import { Leaf } from 'lucide-react'
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet } from 'react-router'
+import { NavLink, Outlet, useLocation } from 'react-router'
+import { isLeaving, signIn, signOut, useAuth } from '~/auth/auth'
 import { useEntitlements } from '~/api/hooks'
 import { mockTier, setMockTier } from '~/api/http'
 
 const link = ({ isActive }: { isActive: boolean }) =>
   `rounded-full px-3 py-1.5 text-sm font-semibold transition-colors ${isActive ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-secondary'}`
 
+/** With sign-in on, nothing of the app (and none of its requests) appears until there is a signed-in person. The set-up guide stays open. */
 export function AppLayout() {
   const { t } = useTranslation()
+  const auth = useAuth()
+  const { pathname } = useLocation()
+  const blocked = auth.enabled && !auth.user && !pathname.startsWith('/guide')
+
+  useEffect(() => {
+    if (blocked && !auth.loading && !isLeaving()) void signIn()
+  }, [blocked, auth.loading])
+
+  if (blocked) {
+    return (
+      <main className="mx-auto flex min-h-svh max-w-md items-center justify-center px-4 text-center">
+        <p role="status">{t('app.auth.signingIn')}</p>
+      </main>
+    )
+  }
+  return <Shell />
+}
+
+function Shell() {
+  const { t } = useTranslation()
+  const auth = useAuth()
   const entitlements = useEntitlements()
   const current = mockTier()
 
@@ -65,6 +89,21 @@ export function AppLayout() {
               </Select>
               </span>
             )}
+            {auth.enabled &&
+              (auth.user ? (
+                <span className="flex items-center gap-2">
+                  <span className="text-sm font-semibold" data-testid="signed-in-as">
+                    {auth.user.profile.name ?? auth.user.profile.preferred_username}
+                  </span>
+                  <button type="button" className="rounded-full px-3 py-1.5 text-sm font-semibold hover:bg-secondary" onClick={() => void signOut()}>
+                    {t('app.auth.signOut')}
+                  </button>
+                </span>
+              ) : (
+                <button type="button" className="rounded-full bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground" onClick={() => void signIn()}>
+                  {t('app.auth.signIn')}
+                </button>
+              ))}
             <LanguageSwitcher />
             <ThemeToggle />
           </div>
