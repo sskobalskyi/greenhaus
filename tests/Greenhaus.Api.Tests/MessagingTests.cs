@@ -183,6 +183,23 @@ public class MessagingTests(GreenhausFixture api) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task When_billing_says_the_tier_fell_to_the_free_one_no_source_is_listed()
+    {
+        var user = GreenhausFixture.NewUser();
+        var now = DateTimeOffset.UtcNow;
+        await Publish("entitlement.changed.v1", new { userId = user, tier = "gardener", previousTier = "novice", reason = "grant_started", validUntil = now.AddDays(30), at = now });
+        await Eventually(async () => (await Json(Call(user, "GET", "/me/entitlements"), HttpStatusCode.OK))["tier"]!.GetValue<string>() == "gardener" ? "yes" : null, "the grant");
+
+        await Publish("entitlement.changed.v1", new { userId = user, tier = "novice", previousTier = "gardener", reason = "grant_revoked", at = now.AddSeconds(5) });
+        var entitlement = await Eventually(async () =>
+        {
+            var e = await Json(Call(user, "GET", "/me/entitlements"), HttpStatusCode.OK);
+            return e["tier"]!.GetValue<string>() == "novice" ? e : null;
+        }, "the tier to fall");
+        Assert.Empty(entitlement["sources"]!.AsArray());
+    }
+
+    [Fact]
     public async Task A_retired_device_leaves_the_pot_and_the_pot_remembers_it()
     {
         var user = GreenhausFixture.NewUser();
