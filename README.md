@@ -113,6 +113,14 @@ npm run dev -w @greenhaus/web   # http://localhost:5174
 
 The app sends a signed-out person to Keycloak (in the app's language), where anyone can register (or use `demo` / `demo`). The API validates the token's issuer and the audience `greenhaus-api`, and `/me` is created from the token on the first call. The plans and the set-up guide can be read without an account; everything else asks for one. Sign-out ends the Keycloak session. See [ADR 4](docs/adr/0004-sign-in.md).
 
+The sign-in flow is covered by an automated browser test against this stack (a visitor reads the plans, is sent to Keycloak, registers and comes back signed in, sees the language of the app on the Keycloak pages, and sign-out really ends the session):
+
+```powershell
+docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real up -d --build api keycloak
+docker compose up -d mock                     # for the prices on the plans page
+npm run e2e:auth -w @greenhaus/web            # starts the web app itself and waits for the stack
+```
+
 ### Against a live Pulse
 
 Checked against Pulse `main` (device registry, JWT, channels) with its Keycloak: Greenhaus asks for a client-credentials token of `pulse-service` and claims a shipped device, reads its state and latest readings, and stores calibration. Rules and commands are in the Pulse contract but not in Pulse yet, so syncing alert rules and sending run or kill-switch commands answers `pulse_not_supported`: the pot's own data stays correct, a run is refused with 503 and the rules follow when Pulse offers them.

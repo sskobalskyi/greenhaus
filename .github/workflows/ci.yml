@@ -91,6 +91,40 @@ jobs:
       - name: Build the container image
         run: docker build -f src/Greenhaus.Billing/Dockerfile -t greenhaus-billing .
 
+  signin:
+    name: Sign-in end to end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install the browser
+        run: npx playwright install --with-deps chromium
+      - name: Start Keycloak, the API and the billing mock
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real up -d --build api keycloak
+          docker compose up -d --build mock
+      - name: Run the sign-in tests (they wait for the stack themselves)
+        run: npm run e2e:auth -w @greenhaus/web
+      - name: Keep the report when it fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: signin-playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+      - name: Show the service logs when it fails
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real logs --no-color api keycloak | tail -n 200
+      - name: Stop the stack
+        if: always()
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real down
+          docker compose down
+
   ui:
     name: Design system and Storybook
     runs-on: ubuntu-latest

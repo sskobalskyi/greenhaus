@@ -17,4 +17,4 @@ The product needs sign-up and sign-in (self-registration, decision D8). The API 
 ## Consequences
 - The real stack is usable by a person in a browser: register, sign in, see their own pots, sign out.
 - Pulse's own Keycloak is a separate realm and container. Sharing one realm across the projects (the ecosystem plan's single-identity goal) is a later step for the umbrella compose.
-- Sign-in is checked by hand in a real browser (registration, callback, API call with the token, Ukrainian login page, sign-out). An automated end-to-end test would need Keycloak in CI.
+- Sign-in is covered by an automated browser test (`npm run e2e:auth -w @greenhaus/web`, CI job "Sign-in end to end"): public plans without a single 401, the redirects to Keycloak, registration and return signed in with the API accepting the token, the Ukrainian login page, and sign-out ending the session. It runs against real Keycloak and the real API, separately from the mock-based suite.
