@@ -521,6 +521,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/pots/{potId}/assistant/ask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                potId: components["parameters"]["PotId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the plant assistant about a pot
+         * @description The answer streams as server-sent events: `sources` (the documents the answer may cite), then `token` events with
+         *     pieces of the text, then one `done`. Greenhaus adds what it knows about the pot to the question, as much as the tier
+         *     allows (`aiDataAccess`): none gives the pot and its plants, `current` adds the latest readings and open alerts,
+         *     `history` adds a summary of the last days and the care log.
+         *
+         *     A question counts against the monthly quota (`limits.aiQuestionsPerMonth`, `usage.aiQuestionsThisMonth`) when the
+         *     assistant really answered (`done.mode` is `answer`). A fallback with passages only, or no result, does not count.
+         *     When the quota is used up the answer is `403` with code `limit_reached` and limitType `ai_questions`.
+         */
+        post: operations["askAssistant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/claims/preview": {
         parameters: {
             query?: never;
@@ -900,6 +929,33 @@ export interface components {
              */
             origin?: "species_schedule" | "ph_sensor" | "safety_schedule" | "user";
         };
+        AssistantQuestion: {
+            question: string;
+        };
+        /** @description One event of the answer stream, told apart by `type`. */
+        AssistantEvent: {
+            /** @enum {string} */
+            type: "sources" | "token" | "done";
+            /** @description With `sources`. The passages the answer may cite, numbered from 1. */
+            sources?: {
+                number: number;
+                /** Format: uuid */
+                documentId?: string;
+                title: string;
+                text: string;
+            }[];
+            /** @description With `token`. A piece of the answer. */
+            text?: string;
+            /**
+             * @description With `done`. `answer` was written by the model, `retrieval_only` shows passages only, `no_results` found nothing.
+             * @enum {string}
+             */
+            mode?: "answer" | "retrieval_only" | "no_results";
+            /** @description With `done`, when the answer is not a full one, for example `budget_exceeded`. */
+            reason?: string;
+            /** @description With `done` and `answer`. */
+            tokens?: number;
+        };
         ClaimPreview: {
             deviceId: string;
             model: string;
@@ -981,6 +1037,15 @@ export interface components {
         };
         /** @description Rate limit exceeded */
         TooManyRequests: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The assistant or the device platform it relies on is not available right now (code `assistant_unavailable`) */
+        ServiceUnavailable: {
             headers: {
                 [name: string]: unknown;
             };
@@ -1831,6 +1896,37 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    askAssistant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                potId: components["parameters"]["PotId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssistantQuestion"];
+            };
+        };
+        responses: {
+            /** @description The answer as a stream of events */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["AssistantEvent"][];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            403: components["responses"]["TierRequired"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["ServiceUnavailable"];
         };
     };
     previewClaim: {

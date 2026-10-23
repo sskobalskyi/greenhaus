@@ -30,6 +30,7 @@ tags:
   - name: Controls
   - name: Care
   - name: Claims
+  - name: Assistant
 paths:
   /me:
     get:
@@ -625,6 +626,42 @@ paths:
               schema: { $ref: '#/components/schemas/CareTask' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /pots/{potId}/assistant/ask:
+    parameters:
+      - $ref: '#/components/parameters/PotId'
+    post:
+      tags: [Assistant]
+      operationId: askAssistant
+      summary: Ask the plant assistant about a pot
+      description: |
+        The answer streams as server-sent events: `sources` (the documents the answer may cite), then `token` events with
+        pieces of the text, then one `done`. Greenhaus adds what it knows about the pot to the question, as much as the tier
+        allows (`aiDataAccess`): none gives the pot and its plants, `current` adds the latest readings and open alerts,
+        `history` adds a summary of the last days and the care log.
+
+        A question counts against the monthly quota (`limits.aiQuestionsPerMonth`, `usage.aiQuestionsThisMonth`) when the
+        assistant really answered (`done.mode` is `answer`). A fallback with passages only, or no result, does not count.
+        When the quota is used up the answer is `403` with code `limit_reached` and limitType `ai_questions`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssistantQuestion' }
+      responses:
+        '200':
+          description: The answer as a stream of events
+          content:
+            text/event-stream:
+              schema:
+                type: array
+                description: |
+                  The events in order, each sent as a line `data: <json>` followed by a blank line.
+                items: { $ref: '#/components/schemas/AssistantEvent' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/TierRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
   /claims/preview:
     get:
       tags: [Claims]
@@ -735,6 +772,12 @@ components:
           schema: { $ref: '#/components/schemas/Problem' }
     TooManyRequests:
       description: Rate limit exceeded
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+    ServiceUnavailable:
+      description: The assistant or the device platform it relies on is not available right now (code `assistant_unavailable`)
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
@@ -1134,6 +1177,35 @@ components:
           enum: [species_schedule, ph_sensor, safety_schedule, user]
           description: Where the task came from
 
+    AssistantQuestion:
+      type: object
+      required: [question]
+      properties:
+        question: { type: string, minLength: 1, maxLength: 500 }
+    AssistantEvent:
+      type: object
+      description: One event of the answer stream, told apart by `type`.
+      required: [type]
+      properties:
+        type: { type: string, enum: [sources, token, done] }
+        sources:
+          type: array
+          description: With `sources`. The passages the answer may cite, numbered from 1.
+          items:
+            type: object
+            required: [number, title, text]
+            properties:
+              number: { type: integer, minimum: 1 }
+              documentId: { type: string, format: uuid }
+              title: { type: string }
+              text: { type: string }
+        text: { type: string, description: With `token`. A piece of the answer. }
+        mode:
+          type: string
+          enum: [answer, retrieval_only, no_results]
+          description: With `done`. `answer` was written by the model, `retrieval_only` shows passages only, `no_results` found nothing.
+        reason: { type: string, description: 'With `done`, when the answer is not a full one, for example `budget_exceeded`.' }
+        tokens: { type: integer, minimum: 0, description: With `done` and `answer`. }
     ClaimPreview:
       type: object
       required: [deviceId, model, claimable]

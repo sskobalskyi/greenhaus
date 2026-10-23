@@ -137,6 +137,29 @@
                                                                }
                                                 }
                                             ]
+                    },
+                    {
+                        "clientId":  "greenhaus-assistant",
+                        "name":  "Greenhaus API calling the Docs-Brain assistant (client credentials)",
+                        "enabled":  true,
+                        "publicClient":  false,
+                        "secret":  "greenhaus-assistant-dev-secret",
+                        "serviceAccountsEnabled":  true,
+                        "standardFlowEnabled":  false,
+                        "directAccessGrantsEnabled":  false,
+                        "protocolMappers":  [
+                                                {
+                                                    "name":  "docs-brain audience",
+                                                    "protocol":  "openid-connect",
+                                                    "protocolMapper":  "oidc-audience-mapper",
+                                                    "consentRequired":  false,
+                                                    "config":  {
+                                                                   "included.client.audience":  "docs-brain",
+                                                                   "id.token.claim":  "false",
+                                                                   "access.token.claim":  "true"
+                                                               }
+                                                }
+                                            ]
                     }
                 ],
     "users":  [
@@ -211,6 +234,14 @@
                       "realmRoles":  [
                                          "pulse-service"
                                      ]
+                  },
+                  {
+                      "username":  "service-account-greenhaus-assistant",
+                      "enabled":  true,
+                      "serviceAccountClientId":  "greenhaus-assistant",
+                      "realmRoles":  [
+                                         "docs-brain.assistant"
+                                     ]
                   }
               ],
     "roles":  {
@@ -226,6 +257,10 @@
                                 {
                                     "name":  "fulfilment-admin",
                                     "description":  "Reads the packing bundle of the fulfilment service (claim tokens, device credentials)"
+                                },
+                                {
+                                    "name":  "docs-brain.assistant",
+                                    "description":  "Service caller of the Docs-Brain assistant (the Greenhaus API asking on behalf of a user)"
                                 }
                             ]
               }

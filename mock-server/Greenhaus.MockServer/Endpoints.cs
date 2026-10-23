@@ -432,6 +432,42 @@ public static class Endpoints
         });
 
         // ---- claims ----------------------------------------------------------------------------------
+        // The assistant streams its answer as server-sent events. The text is canned, but the rules are the real ones:
+        // a monthly quota per tier, only answered questions count, and what the answer says it saw depends on the tier.
+        api.MapPost("/pots/{potId:guid}/assistant/ask", async (Guid potId, AssistantQuestion body, HttpContext ctx, MockStore s) =>
+        {
+            bool exists; Tier tier; int used;
+            lock (s.Sync) { exists = s.Pots.ContainsKey(potId); tier = TierOf(ctx, s); used = s.AiQuestions; }
+            if (!exists) { await NotFound().ExecuteAsync(ctx); return; }
+            if (string.IsNullOrWhiteSpace(body.Question) || body.Question.Length > 500)
+            {
+                await Fail(400, "validation_failed", "A question of 1 to 500 characters is required").ExecuteAsync(ctx);
+                return;
+            }
+
+            var limits = MockStore.LimitsFor(tier);
+            if (used >= limits.AiQuestionsPerMonth)
+            {
+                await Fail(403, "limit_reached", "Question limit reached", $"The {tier} tier allows {limits.AiQuestionsPerMonth} questions a month", "ai_questions", NextTier(tier)).ExecuteAsync(ctx);
+                return;
+            }
+
+            var seen = limits.AiDataAccess switch
+            {
+                "history" => "your readings of the last days and your care log",
+                "current" => "the current readings of your pot",
+                _ => "your pot and its plants (readings are not part of your plan)",
+            };
+            var words = $"Based on {seen}: the plants look fine. Water when the soil gets dry.".Split(' ');
+            ctx.Response.ContentType = "text/event-stream";
+            ctx.Response.Headers.CacheControl = "no-cache";
+            async Task Send(object evt) { await ctx.Response.WriteAsync($"data: {System.Text.Json.JsonSerializer.Serialize(evt, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))}\n\n"); await ctx.Response.Body.FlushAsync(); }
+            await Send(new { type = "sources", sources = Array.Empty<object>() });
+            foreach (var word in words) await Send(new { type = "token", text = word + " " });
+            await Send(new { type = "done", mode = "answer", tokens = words.Length });
+            lock (s.Sync) s.AiQuestions++;
+        });
+
         api.MapGet("/claims/preview", (string deviceId, string token, MockStore s) =>
         {
             lock (s.Sync)

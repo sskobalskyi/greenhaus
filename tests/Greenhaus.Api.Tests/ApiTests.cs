@@ -83,7 +83,8 @@ public class ApiTests(GreenhausFixture api)
         await Json(Call(user, "DELETE", "/pots/{potId}/plants/{plantId}", new { potId, plantId = plant["id"]!.GetValue<string>() }), HttpStatusCode.NoContent);
         await Call(user, "DELETE", "/pots/{potId}", route);
 
-        api.Client.AssertCovers();
+        // The assistant endpoint is in the contract and the mock, and the service gets it in its own change.
+        api.Client.AssertCovers("askAssistant");
     }
 
     [Fact]

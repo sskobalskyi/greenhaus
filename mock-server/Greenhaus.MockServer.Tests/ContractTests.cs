@@ -75,6 +75,7 @@ public class ContractTests
 
         // claims
         Assert.Equal(HttpStatusCode.OK, (await api.Call("GET", "/claims/preview", query: "deviceId=ghx-demo-0001&token=demo-token")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = kitchenId }, new { question = "Is my basil ok?" })).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await api.Call("POST", "/claims", body: new { deviceId = "ghx-demo-0001", token = "demo-token", potId = kitchenId })).StatusCode);
 
         // removal last, so earlier calls had something to work with
@@ -319,5 +320,50 @@ public class ContractTests
         var id = zones[0]!["id"]!.GetValue<string>();
         var renamed = await api.Node(await api.Call("PATCH", "/pots/{potId}/zones/{zoneId}", new { potId = bed, zoneId = id }, new { label = "Tomatoes" }));
         Assert.Equal("Tomatoes", renamed["label"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task The_assistant_answers_within_the_monthly_quota_and_only_answered_questions_count()
+    {
+        using var api = new Api();
+        var pot = Api.Id(await api.PotNamed("Kitchen herbs"));
+
+        for (var i = 0; i < 10; i++)
+            Assert.Equal(HttpStatusCode.OK, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = pot }, new { question = "Is my basil ok?" }, tier: "novice")).StatusCode);
+
+        var usage = await api.Node(await api.Call("GET", "/me/entitlements", tier: "novice"));
+        Assert.Equal(10, usage["usage"]!["aiQuestionsThisMonth"]!.GetValue<int>());
+
+        var refused = await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = pot }, new { question = "One more?" }, tier: "novice");
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+        var problem = await api.Node(refused);
+        Assert.Equal("limit_reached", problem["code"]!.GetValue<string>());
+        Assert.Equal("ai_questions", problem["limitType"]!.GetValue<string>());
+        Assert.Equal("gardener", problem["requiredTier"]!.GetValue<string>());
+
+        // A higher tier has a bigger quota.
+        Assert.Equal(HttpStatusCode.OK, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = pot }, new { question = "Again?" }, tier: "gardener")).StatusCode);
+    }
+
+    [Fact]
+    public async Task What_the_assistant_says_it_saw_depends_on_the_tier_and_bad_questions_are_refused()
+    {
+        using var api = new Api();
+        var pot = Api.Id(await api.PotNamed("Kitchen herbs"));
+
+        // The answer arrives in pieces, so put the text of the token events back together.
+        async Task<string> Ask(string tier)
+        {
+            var stream = await (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = pot }, new { question = "How is it?" }, tier: tier)).Content.ReadAsStringAsync();
+            var events = stream.Split("\n\n", StringSplitOptions.RemoveEmptyEntries).Select(e => System.Text.Json.Nodes.JsonNode.Parse(e["data:".Length..])!);
+            return string.Concat(events.Where(e => e["type"]!.GetValue<string>() == "token").Select(e => e["text"]!.GetValue<string>()));
+        }
+
+        Assert.Contains("not part of your plan", await Ask("novice"));
+        Assert.Contains("current readings", await Ask("gardener"));
+        Assert.Contains("care log", await Ask("druid"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = pot }, new { question = "" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = Guid.NewGuid() }, new { question = "Hi" })).StatusCode);
     }
 }

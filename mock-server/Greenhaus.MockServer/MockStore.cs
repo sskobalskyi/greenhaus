@@ -71,10 +71,14 @@ public class MockStore
     }
 
     /// <summary>Puts the mock back to its seeded state. Used by end-to-end tests, it is not part of the contract.</summary>
+    /// <summary>Assistant questions answered this month, which count against the tier quota.</summary>
+    public int AiQuestions { get; set; }
+
     public void Reset()
     {
         lock (Sync)
         {
+            AiQuestions = 0;
             Pots.Clear();
             Devices.Clear();
             User.DisplayName = "Demo Gardener";
@@ -139,7 +143,7 @@ public class MockStore
         }
         return new Entitlements
         {
-            Tier = tier, Limits = LimitsFor(tier), Usage = new Usage { Pots = Pots.Count, AiQuestionsThisMonth = 3 }, Sources = sources,
+            Tier = tier, Limits = LimitsFor(tier), Usage = new Usage { Pots = Pots.Count, AiQuestionsThisMonth = AiQuestions }, Sources = sources,
         };
     }
 
@@ -165,7 +169,7 @@ public class MockStore
         {
             Tier = tier,
             Limits = LimitsFor(tier),
-            Usage = new Usage { Pots = Pots.Count, AiQuestionsThisMonth = 3 },
+            Usage = new Usage { Pots = Pots.Count, AiQuestionsThisMonth = AiQuestions },
             Sources = sources,
         };
     }
