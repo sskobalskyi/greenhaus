@@ -147,9 +147,19 @@ export function useClaim() {
   })
 }
 
+/**
+ * Billing tells the Greenhaus API about a changed plan through an event, so the new tier arrives a moment after billing
+ * answers. Look again for a few seconds instead of leaving the old tier on screen until the next visit.
+ */
+const SETTLE_DELAYS_MS = [1000, 2500, 5000, 10000]
+
 function useBillingRefresh() {
   const client = useQueryClient()
-  return () => Promise.all([client.invalidateQueries({ queryKey: ['billing'] }), client.invalidateQueries({ queryKey: key('entitlements') })])
+  return () => {
+    const refresh = () => Promise.all([client.invalidateQueries({ queryKey: ['billing'] }), client.invalidateQueries({ queryKey: key('entitlements') })])
+    for (const delay of SETTLE_DELAYS_MS) setTimeout(() => void refresh(), delay)
+    return refresh()
+  }
 }
 
 export function useSubscribe() {
