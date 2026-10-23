@@ -6,8 +6,8 @@ $work = Join-Path (Split-Path $greenhaus -Parent) '.ecosystem'
 $flag = if ($Volumes) { '-v' } else { $null }
 $env:GREENHAUS_DIR = $greenhaus.Replace('\', '/')
 
-foreach ($name in 'orderflow', 'pulse') {
+foreach ($name in 'orderflow', 'pulse', 'docs-brain') {
     $dir = Join-Path $work $name
-    if (Test-Path $dir) { docker compose -p "eco-$name" --project-directory $dir -f "$dir/docker-compose.yml" down $flag }
+    if (Test-Path $dir) { docker compose -p "eco-$($name.Replace('-', ''))" --project-directory $dir -f "$dir/docker-compose.yml" down $flag }
 }
 docker compose -p eco-greenhaus --project-directory $greenhaus --profile real -f "$greenhaus/docker-compose.yml" -f "$greenhaus/docker-compose.auth.yml" down $flag
