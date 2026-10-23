@@ -17,6 +17,11 @@ public sealed class FakePulse : IPulseClient
     public ConcurrentDictionary<(string, string), (double, double)> Calibrations { get; } = new();
     public bool Down { get; set; }
 
+    private readonly ConcurrentDictionary<(string, string), IReadOnlyList<PulsePoint>> _series = new();
+
+    /// <summary>What the series of a channel returns, whatever the window.</summary>
+    public void Series(string device, string channel, params PulsePoint[] points) => _series[(device, channel)] = points;
+
     public static PulseDevice Kit(string id, string state = "shipped") => new(id, "greenhaus-pot-v1", state, null, "online", DateTimeOffset.UtcNow, "1.0.0",
         [new("soil", "soil_moisture", null, "%"), new("temp", "temperature", null, "C"), new("tank", "tank_level", null, "%")],
         [new("pump", "pump", new PulseHardLimits(60, 600, 300), null), new("heater", "heater", new PulseHardLimits(1800, 300, 14400), true)]);
@@ -70,6 +75,12 @@ public sealed class FakePulse : IPulseClient
         Check();
         KillSwitches.Add((deviceId, enabled));
         return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<PulsePoint>> SeriesAsync(string deviceId, string channelId, DateTimeOffset from, DateTimeOffset to, string resolution, CancellationToken ct)
+    {
+        Check();
+        return Task.FromResult(_series.TryGetValue((deviceId, channelId), out var points) ? points : []);
     }
 
     public Task<(double Value, DateTimeOffset At)?> LatestAsync(string deviceId, string channelId, DateTimeOffset since, CancellationToken ct)

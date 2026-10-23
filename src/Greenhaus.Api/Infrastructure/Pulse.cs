@@ -27,6 +27,8 @@ public sealed record PulseDevice(string Id, string Model, string State, string? 
     IReadOnlyList<PulseChannel> Channels, IReadOnlyList<PulseActuator> Actuators);
 public sealed record PulseRule(string ChannelId, string Kind, double? Min, double? Max, double? Margin, int? TimeoutSeconds);
 public sealed record PulseCommand(Guid CommandId, string Status);
+/// <summary>One point of a series: the reading for raw, the average of the bucket (with its minimum and maximum) for 1m and 1h.</summary>
+public sealed record PulsePoint(DateTimeOffset At, double Value, double? Min, double? Max);
 
 /// <summary>A refusal from Pulse, with the stable code it gave. Callers translate it for the user.</summary>
 public sealed class PulseException(int status, string code, string title) : Exception(title)
@@ -47,6 +49,8 @@ public interface IPulseClient
     Task SetKillSwitchAsync(string deviceId, string actuatorId, bool enabled, Guid commandId, DateTimeOffset expiresAt, CancellationToken ct);
     /// <summary>The newest reading of a channel since the given time, or null when there is none.</summary>
     Task<(double Value, DateTimeOffset At)?> LatestAsync(string deviceId, string channelId, DateTimeOffset since, CancellationToken ct);
+    /// <summary>The readings of one channel between two moments at a resolution (raw, 1m or 1h), oldest first. Empty when there are none.</summary>
+    Task<IReadOnlyList<PulsePoint>> SeriesAsync(string deviceId, string channelId, DateTimeOffset from, DateTimeOffset to, string resolution, CancellationToken ct);
 }
 
 public sealed class HttpPulseClient(HttpClient http) : IPulseClient
@@ -102,6 +106,14 @@ public sealed class HttpPulseClient(HttpClient http) : IPulseClient
         return points.Count == 0 ? null : (points[^1].Value, points[^1].Ts);
     }
 
+    public async Task<IReadOnlyList<PulsePoint>> SeriesAsync(string deviceId, string channelId, DateTimeOffset from, DateTimeOffset to, string resolution, CancellationToken ct)
+    {
+        var query = $"from={Uri.EscapeDataString(from.UtcDateTime.ToString("O"))}&to={Uri.EscapeDataString(to.UtcDateTime.ToString("O"))}&resolution={Uri.EscapeDataString(resolution)}";
+        using var response = await Send(HttpMethod.Get, $"devices/{Uri.EscapeDataString(deviceId)}/channels/{Uri.EscapeDataString(channelId)}/series?{query}", null, ct, allowNotFound: true);
+        if (response is null) return [];
+        return [.. (await Read<List<PointWire>>(response, ct)).Select(p => new PulsePoint(p.Ts, p.Value, p.Min, p.Max))];
+    }
+
     private async Task<HttpResponseMessage?> Send(HttpMethod method, string path, object? body, CancellationToken ct, bool allowNotFound = false)
     {
         var request = new HttpRequestMessage(method, path);
@@ -136,7 +148,7 @@ public sealed class HttpPulseClient(HttpClient http) : IPulseClient
     private sealed record ChannelWire(string Id, string Metric, string? Label, string? Unit);
     private sealed record ActuatorWire(string Id, string Kind, PulseHardLimits HardLimits, bool? ThermalCutoff);
     private sealed record CommandWire(Guid CommandId, string Status);
-    private sealed record PointWire(DateTimeOffset Ts, double Value);
+    private sealed record PointWire(DateTimeOffset Ts, double Value, double? Min = null, double? Max = null);
     private sealed record ProblemWire(string? Title, string? Code);
 }
 
