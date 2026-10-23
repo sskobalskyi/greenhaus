@@ -132,6 +132,22 @@ $status = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appT
 Check 'the pot status shows the reading from the device' ([bool]$status)
 
 # ---------------------------------------------------------------------------------------------------------------------
+Step 'The person asks the assistant about the pot'
+$before = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth
+$request = @{ Method = 'Post'; Uri = "$greenhaus/pots/$($pot.id)/assistant/ask"; Headers = @{ Authorization = "Bearer $appToken" }; ContentType = 'application/json'; UseBasicParsing = $true
+              Body = (@{ question = 'Is the soil moisture of my pot ok?' } | ConvertTo-Json -Compress) }
+$stream = Invoke-WebRequest @request
+Check 'the answer streams as server-sent events' ($stream.Headers['Content-Type'] -like 'text/event-stream*')
+$events = @($stream.Content -split "`n`n" | Where-Object { $_.Trim().StartsWith('data:') } | ForEach-Object { $_.Trim().Substring(5).Trim() | ConvertFrom-Json })
+$done = @($events | Where-Object { $_.type -eq 'done' })[0]
+$answer = (@($events | Where-Object { $_.type -eq 'token' } | ForEach-Object { $_.text }) -join '')
+Check 'the assistant answered' ($done.mode -eq 'answer') "(mode $($done.mode), reason $($done.reason))"
+# The mock AI of Docs-Brain builds its answer from what Greenhaus told it about the pot, so the reading must show up in it.
+Check 'the answer is grounded in the pot''s reading (31.5)' ($answer -match '31\.5') "(answer: $answer)"
+$after = Wait-Until { $u = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth; if ($u -eq ($before + 1)) { $u } } 'the question to be counted'
+Check 'the question counts against the monthly quota' ($null -ne $after)
+
+# ---------------------------------------------------------------------------------------------------------------------
 Step 'The shop shows the order as in use'
 $activated = Wait-Until { $t = Call 'GET' "$gateway/orders/$orderId/timeline" $shopToken; if (@($t | Where-Object { $_.step -eq 'Activated' }).Count) { $t } } 'the Activated step'
 Check 'the order timeline has the Activated step with the device id' ($activated -and (@($activated | Where-Object { $_.step -eq 'Activated' })[0].detail -eq $deviceId))

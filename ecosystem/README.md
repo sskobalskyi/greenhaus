@@ -2,7 +2,7 @@
 
 Orderflow (the shop), Pulse (devices) and the Greenhaus services run together on **one broker** and **one Keycloak realm**, and one script checks the whole story for a new person:
 
-> buy a kit in the shop -> the purchase grants a tier -> a device is allocated and registered in Pulse -> the order ships and the device becomes claimable -> the person claims it into a pot -> readings show in the pot -> the order shows as in use.
+> buy a kit in the shop -> the purchase grants a tier -> a device is allocated and registered in Pulse -> the order ships and the device becomes claimable -> the person claims it into a pot -> readings show in the pot -> the person asks the assistant, whose answer is grounded in that reading -> the order shows as in use.
 
 ```powershell
 ./ecosystem/up.ps1      # first run exports Orderflow and Pulse from origin/main, builds and starts everything (several minutes)
@@ -29,7 +29,7 @@ The compose files of each project are used as they are, plus one small file each
 
 ## What the check proves
 
-Each step asserts something another project must have done: the order's customer is the same Keycloak subject the Greenhaus API sees, billing's grant reaches that subject as a Gardener tier, fulfilment's `device.allocated.v1` makes Pulse register the device with the kit's channels and actuators, the shop's `order.shipped.v1` makes fulfilment ship it in Pulse, the claim binds the device to the person in Pulse and links it to a pot, a reading sent to Pulse shows in the pot's status, and the claim event marks the order as in use in the shop.
+Each step asserts something another project must have done: the order's customer is the same Keycloak subject the Greenhaus API sees, billing's grant reaches that subject as a Gardener tier, fulfilment's `device.allocated.v1` makes Pulse register the device with the kit's channels and actuators, the shop's `order.shipped.v1` makes fulfilment ship it in Pulse, the claim binds the device to the person in Pulse and links it to a pot, a reading sent to Pulse shows in the pot's status, the assistant (Docs-Brain, mock AI) answers a question about the pot from the facts Greenhaus gave it, including the reading, and the question counts against the monthly quota, and the claim event marks the order as in use in the shop.
 
 ## Known limits
 
