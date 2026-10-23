@@ -432,6 +432,36 @@ public static class Endpoints
         });
 
         // ---- claims ----------------------------------------------------------------------------------
+        // ---- notifications ---------------------------------------------------------------------------
+        api.MapGet("/notifications", (bool? unread, int? limit, MockStore s) =>
+        {
+            if (limit is < 1 or > 100) return Fail(400, "validation_failed", "limit must be 1 to 100");
+            lock (s.Sync)
+            {
+                return Results.Ok(s.Notifications.Where(n => unread != true || n.ReadAt is null).OrderByDescending(n => n.CreatedAt).Take(limit ?? 30).ToList());
+            }
+        });
+
+        api.MapPost("/notifications/{notificationId:guid}/read", (Guid notificationId, MockStore s) =>
+        {
+            lock (s.Sync)
+            {
+                var notification = s.Notifications.FirstOrDefault(n => n.Id == notificationId);
+                if (notification is null) return NotFound("Unknown notification");
+                notification.ReadAt ??= DateTimeOffset.UtcNow;
+                return Results.Ok(notification);
+            }
+        });
+
+        api.MapPost("/notifications/read-all", (MockStore s) =>
+        {
+            lock (s.Sync)
+            {
+                foreach (var n in s.Notifications.Where(n => n.ReadAt is null)) n.ReadAt = DateTimeOffset.UtcNow;
+                return Results.NoContent();
+            }
+        });
+
         // The assistant streams its answer as server-sent events. The text is canned, but the rules are the real ones:
         // a monthly quota per tier, only answered questions count, and what the answer says it saw depends on the tier.
         api.MapPost("/pots/{potId:guid}/assistant/ask", async (Guid potId, AssistantQuestion body, HttpContext ctx, MockStore s) =>
