@@ -17,8 +17,7 @@ A small "Mock" selector in the header lets you act as the Novice, Gardener or Dr
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `VITE_API_BASE` | `http://localhost:8090/api/greenhaus/v1` | The Greenhaus API |
-| `VITE_BILLING_BASE` | `http://localhost:8090/api/billing/v1` | The billing API: prices, subscribing and cancelling |
-| `VITE_BILLING_BASE` | `http://localhost:8090/api/billing/v1` | Set to `http://localhost:8092/api/billing/v1` for the real billing service |
+| `VITE_BILLING_BASE` | `http://localhost:8090/api/billing/v1` | The billing API: prices, subscribing and cancelling. Set it to `http://localhost:8092/api/billing/v1` for the real billing service |
 | `VITE_OIDC_AUTHORITY` | unset | Turns sign-in on, for example `http://localhost:8181/realms/greenhaus`. Unset, the app has no login (mock mode) |
 | `VITE_OIDC_CLIENT_ID` | `greenhaus-web` | The public Keycloak client of the app |
 | `VITE_SHOP_URL` | `http://localhost:5173` | The marketplace (Orderflow), for "Open the shop" |
