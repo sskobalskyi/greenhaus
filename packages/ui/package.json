@@ -8,7 +8,7 @@
         "storybook": "storybook dev -p 6006",
         "build-storybook": "storybook build",
         "api:types": "npx --yes openapi-typescript@7.13.0 ../../contracts/openapi/greenhaus-api.yaml -o src/api/schema.d.ts",
-        "test": "vitest run --project=storybook",
+        "test": "vitest run",
         "typecheck": "tsc -p tsconfig.app.json --noEmit",
         "screenshots": "node scripts/screenshots.mjs"
     },
