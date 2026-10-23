@@ -40,6 +40,7 @@ function Wait-Url([string]$url, [string]$name, [int]$seconds = 180) {
 
 $orderflow = Export-Main 'orderflow'
 $pulse = Export-Main 'pulse'
+$docsBrain = Export-Main 'docs-brain'
 if ($ShortGrace) { $env:BILLING_GRACE = '00:00:20'; $env:BILLING_TICK = '00:00:05' }
 $env:GREENHAUS_DIR = $greenhaus.Replace('\', '/')
 
@@ -68,6 +69,13 @@ docker compose -p eco-pulse --project-directory $pulse `
     up -d --build redpanda timescaledb api
 if ($LASTEXITCODE) { throw 'Pulse did not start' }
 
+# Docs-Brain: the assistant behind the Greenhaus API. Mock AI, so no model download; only its API and database. Its web UI would claim 8090.
+Write-Host '== Docs-Brain'
+docker compose -p eco-docsbrain --project-directory $docsBrain --env-file "$greenhaus/ecosystem/docsbrain.env" `
+    -f "$docsBrain/docker-compose.yml" `
+    up -d --build postgres api
+if ($LASTEXITCODE) { throw 'Docs-Brain did not start' }
+
 Write-Host '== Waiting'
 Wait-Url 'http://localhost:8181/realms/greenhaus/.well-known/openid-configuration' 'Keycloak (greenhaus realm)'
 Wait-Url 'http://localhost:8080/health' 'Orderflow gateway'
@@ -75,4 +83,5 @@ Wait-Url 'http://localhost:5080/health' 'Pulse API'
 Wait-Url 'http://localhost:8091/health' 'Greenhaus API'
 Wait-Url 'http://localhost:8092/health' 'Greenhaus billing'
 Wait-Url 'http://localhost:8093/health' 'Greenhaus fulfilment'
+Wait-Url 'http://localhost:5090/health' 'Docs-Brain API'
 Write-Host 'The ecosystem is up. Run ./ecosystem/e2e.ps1 for the end-to-end check, ./ecosystem/down.ps1 to stop it.'
