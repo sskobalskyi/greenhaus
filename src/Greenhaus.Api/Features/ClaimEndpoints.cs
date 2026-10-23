@@ -111,6 +111,10 @@ public static class ClaimEndpoints
             o.AddPolicy(Policy, http => RateLimitPartition.GetFixedWindowLimiter(
                 http.User.Identity?.IsAuthenticated == true ? http.User.UserId() : http.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
+            // The assistant costs tokens, so a person may ask 20 questions a minute at most.
+            o.AddPolicy(AssistantEndpoints.RateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
+                http.User.Identity?.IsAuthenticated == true ? http.User.UserId() : http.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
             o.OnRejected = async (context, ct) =>
             {
                 context.HttpContext.Response.Headers.RetryAfter = "60";

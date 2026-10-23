@@ -74,6 +74,23 @@ namespace Greenhaus.Api.Persistence.Migrations
                     b.ToTable("actuators", "greenhaus");
                 });
 
+            modelBuilder.Entity("Greenhaus.Api.Persistence.AssistantUsageEntity", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateOnly>("Month")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Count")
+                        .HasColumnType("integer");
+
+                    b.HasKey("UserId", "Month");
+
+                    b.ToTable("assistant_usage", "greenhaus");
+                });
+
             modelBuilder.Entity("Greenhaus.Api.Persistence.AuditEntity", b =>
                 {
                     b.Property<Guid>("Id")

@@ -20,6 +20,7 @@ public sealed class GreenhausFixture : IAsyncLifetime
     public OpenApiContract Contract { get; private set; } = null!;
     public ContractClient Client { get; private set; } = null!;
     public FakePulse Pulse { get; } = new();
+    public FakeDocsBrain Docs { get; } = new();
     public AsyncApiContract Events { get; private set; } = null!;
     public string RabbitHost => _rabbit.Hostname;
     public int RabbitPort => _rabbit.GetMappedPublicPort(5672);
@@ -37,7 +38,7 @@ public sealed class GreenhausFixture : IAsyncLifetime
             b.UseSetting("RabbitMq:User", RabbitMqBuilder.DefaultUsername);
             b.UseSetting("RabbitMq:Password", RabbitMqBuilder.DefaultPassword);
             b.UseSetting("Species:Path", Path.Combine(root, "data", "species.json"));
-            b.ConfigureTestServices(services => services.AddSingleton<Greenhaus.Api.Infrastructure.IPulseClient>(Pulse));
+            b.ConfigureTestServices(services => services.AddSingleton<Greenhaus.Api.Infrastructure.IPulseClient>(Pulse).AddSingleton<Greenhaus.Api.Infrastructure.IAssistantClient>(Docs));
         });
         _client = _factory.CreateClient();
         Contract = new OpenApiContract(Path.Combine(root, "contracts", "openapi", "greenhaus-api.yaml"));
