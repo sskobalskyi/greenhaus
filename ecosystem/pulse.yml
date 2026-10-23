@@ -1,0 +1,19 @@
+# Applied on top of Pulse's compose, shared-realm and events files: Pulse uses the one broker of the ecosystem
+# (Orderflow's, on host port 5672) instead of the broker its events file would start.
+services:
+  rabbitmq:
+    profiles: !override [own-broker]
+  api:
+    environment:
+      Events__Enabled: "true"
+      Events__RabbitMq__HostName: host.docker.internal
+      Events__RabbitMq__Port: "5672"
+      Events__RabbitMq__UserName: guest
+      Events__RabbitMq__Password: guest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on: !override
+      redpanda:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy

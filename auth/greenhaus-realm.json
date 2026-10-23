@@ -116,6 +116,27 @@
                         "serviceAccountsEnabled":  true,
                         "standardFlowEnabled":  false,
                         "directAccessGrantsEnabled":  false
+                    },
+                    {
+                        "clientId":  "greenhaus-e2e",
+                        "name":  "Scripted end-to-end checks (password grant, development only)",
+                        "enabled":  true,
+                        "publicClient":  true,
+                        "standardFlowEnabled":  false,
+                        "directAccessGrantsEnabled":  true,
+                        "protocolMappers":  [
+                                                {
+                                                    "name":  "greenhaus-api audience",
+                                                    "protocol":  "openid-connect",
+                                                    "protocolMapper":  "oidc-audience-mapper",
+                                                    "consentRequired":  false,
+                                                    "config":  {
+                                                                   "included.client.audience":  "greenhaus-api",
+                                                                   "id.token.claim":  "false",
+                                                                   "access.token.claim":  "true"
+                                                               }
+                                                }
+                                            ]
                     }
                 ],
     "users":  [
@@ -149,7 +170,8 @@
                                           }
                                       ],
                       "realmRoles":  [
-                                         "admin"
+                                         "admin",
+                                         "fulfilment-admin"
                                      ]
                   },
                   {
@@ -200,6 +222,10 @@
                                 {
                                     "name":  "pulse-service",
                                     "description":  "Service caller of the Pulse device API (registry, claim, retire)"
+                                },
+                                {
+                                    "name":  "fulfilment-admin",
+                                    "description":  "Reads the packing bundle of the fulfilment service (claim tokens, device credentials)"
                                 }
                             ]
               }

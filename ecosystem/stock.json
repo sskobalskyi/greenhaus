@@ -1,0 +1,5 @@
+[
+  { "sku": "GH-STARTER-01", "available": 50 },
+  { "sku": "GH-POT-KIT-01", "available": 30 },
+  { "sku": "GH-GREENHOUSE-01", "available": 10 }
+]

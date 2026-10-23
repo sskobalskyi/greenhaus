@@ -1,0 +1,76 @@
+# Starts the whole ecosystem on this machine: Orderflow (shop), Pulse (devices) and the Greenhaus services, on one broker
+# and one Keycloak realm. Local Docker only. See ecosystem/README.md.
+#
+#   ./ecosystem/up.ps1            # start (exports Orderflow and Pulse from origin/main on the first run)
+#   ./ecosystem/up.ps1 -Refresh   # export them again from the latest origin/main first
+param([switch]$Refresh)
+
+# Docker writes its progress to stderr, so native errors must not stop the script: exit codes are checked instead.
+$ErrorActionPreference = 'Continue'
+$greenhaus = (Resolve-Path "$PSScriptRoot\..").Path
+$cv = Split-Path $greenhaus -Parent
+$work = Join-Path $cv '.ecosystem'
+New-Item -ItemType Directory -Force $work | Out-Null
+
+# Pulse and Orderflow belong to other sessions and their working trees may hold unfinished work, so the stack is built from
+# a clean export of each project's main branch.
+function Export-Main([string]$repo) {
+    $target = Join-Path $work $repo
+    if ((Test-Path $target) -and -not $Refresh) { return $target }
+    $source = Join-Path $cv $repo
+    git -C $source fetch -q origin
+    $zip = Join-Path $work "$repo.zip"
+    git -C $source archive --format=zip -o $zip origin/main
+    if (Test-Path $target) { Remove-Item -Recurse -Force $target }
+    Expand-Archive -Force $zip $target
+    Remove-Item $zip
+    Write-Host "exported $repo from origin/main ($(git -C $source rev-parse --short origin/main))"
+    return $target
+}
+
+function Wait-Url([string]$url, [string]$name, [int]$seconds = 180) {
+    $until = (Get-Date).AddSeconds($seconds)
+    while ((Get-Date) -lt $until) {
+        try { if ((Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 5).StatusCode -eq 200) { Write-Host "up: $name"; return } } catch { }
+        Start-Sleep -Seconds 2
+    }
+    throw "$name did not become ready at $url"
+}
+
+$orderflow = Export-Main 'orderflow'
+$pulse = Export-Main 'pulse'
+$env:GREENHAUS_DIR = $greenhaus.Replace('\', '/')
+
+# Orderflow first: its RabbitMQ is the one broker of the ecosystem. Its own Keycloak does not start, it uses the shared realm.
+Write-Host '== Orderflow'
+docker compose -p eco-orderflow --project-directory $orderflow `
+    -f "$orderflow/docker-compose.yml" -f "$orderflow/docker-compose.shared-realm.yml" -f "$greenhaus/ecosystem/orderflow.yml" `
+    up -d --build
+if ($LASTEXITCODE) { throw 'Orderflow did not start' }
+
+# Greenhaus: Keycloak with the shared realm, the API, billing and fulfilment, with their Pulse token from that realm.
+Write-Host '== Greenhaus'
+$env:PULSE_URL = 'http://host.docker.internal:5080/api/pulse/v2'
+$env:PULSE_TOKEN_URL = 'http://host.docker.internal:8181/realms/greenhaus/protocol/openid-connect/token'
+$env:PULSE_CLIENT_ID = 'pulse-service'
+$env:PULSE_CLIENT_SECRET = 'pulse-dev-secret'
+docker compose -p eco-greenhaus --project-directory $greenhaus --profile real `
+    -f "$greenhaus/docker-compose.yml" -f "$greenhaus/docker-compose.auth.yml" -f "$greenhaus/ecosystem/greenhaus.yml" `
+    up -d --build api billing fulfilment keycloak
+if ($LASTEXITCODE) { throw 'Greenhaus did not start' }
+
+# Pulse: only what the check needs (API, Kafka-compatible broker, TimescaleDB). Its dashboard would claim port 8080.
+Write-Host '== Pulse'
+docker compose -p eco-pulse --project-directory $pulse `
+    -f "$pulse/docker-compose.yml" -f "$pulse/docker-compose.shared-realm.yml" -f "$pulse/docker-compose.events.yml" -f "$greenhaus/ecosystem/pulse.yml" `
+    up -d --build redpanda timescaledb api
+if ($LASTEXITCODE) { throw 'Pulse did not start' }
+
+Write-Host '== Waiting'
+Wait-Url 'http://localhost:8181/realms/greenhaus/.well-known/openid-configuration' 'Keycloak (greenhaus realm)'
+Wait-Url 'http://localhost:8080/health' 'Orderflow gateway'
+Wait-Url 'http://localhost:5080/health' 'Pulse API'
+Wait-Url 'http://localhost:8091/health' 'Greenhaus API'
+Wait-Url 'http://localhost:8092/health' 'Greenhaus billing'
+Wait-Url 'http://localhost:8093/health' 'Greenhaus fulfilment'
+Write-Host 'The ecosystem is up. Run ./ecosystem/e2e.ps1 for the end-to-end check, ./ecosystem/down.ps1 to stop it.'

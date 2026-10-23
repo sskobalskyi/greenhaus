@@ -1,0 +1,19 @@
+# Applied on top of Orderflow's own compose files: the shop sells the Greenhaus kits.
+# GREENHAUS_DIR is set by up.ps1 (forward slashes, no trailing slash).
+services:
+  catalog:
+    environment:
+      Catalog__SeedFile: /seed/products.json
+    volumes:
+      - type: bind
+        source: ${GREENHAUS_DIR}/data/shop-catalog.json
+        target: /seed/products.json
+        read_only: true
+  inventory:
+    environment:
+      Inventory__SeedFile: /seed/stock.json
+    volumes:
+      - type: bind
+        source: ${GREENHAUS_DIR}/ecosystem/stock.json
+        target: /seed/stock.json
+        read_only: true
