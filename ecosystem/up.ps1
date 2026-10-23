@@ -3,7 +3,8 @@
 #
 #   ./ecosystem/up.ps1            # start (exports Orderflow and Pulse from origin/main on the first run)
 #   ./ecosystem/up.ps1 -Refresh   # export them again from the latest origin/main first
-param([switch]$Refresh)
+#   ./ecosystem/up.ps1 -ShortGrace   # billing's grace period for a returned order is 20 seconds instead of 7 days (for e2e.ps1 -WaitForRevocation)
+param([switch]$Refresh, [switch]$ShortGrace)
 
 # Docker writes its progress to stderr, so native errors must not stop the script: exit codes are checked instead.
 $ErrorActionPreference = 'Continue'
@@ -39,6 +40,7 @@ function Wait-Url([string]$url, [string]$name, [int]$seconds = 180) {
 
 $orderflow = Export-Main 'orderflow'
 $pulse = Export-Main 'pulse'
+if ($ShortGrace) { $env:BILLING_GRACE = '00:00:20'; $env:BILLING_TICK = '00:00:05' }
 $env:GREENHAUS_DIR = $greenhaus.Replace('\', '/')
 
 # Orderflow first: its RabbitMQ is the one broker of the ecosystem. Its own Keycloak does not start, it uses the shared realm.

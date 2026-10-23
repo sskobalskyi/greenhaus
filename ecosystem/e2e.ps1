@@ -4,7 +4,13 @@
 #   becomes claimable -> the person claims it into a pot -> readings show in the pot -> the order shows as in use.
 #
 # Needs the stack from ./ecosystem/up.ps1. Exits 0 when every step holds.
-param([string]$Sku = 'GH-POT-KIT-01')
+param(
+    [string]$Sku = 'GH-POT-KIT-01',
+    # Also return the goods: the purchase grant goes to at risk, with a deadline.
+    [switch]$Return,
+    # With -Return, also wait for the grace period to end and the tier to fall back (needs up.ps1 -ShortGrace).
+    [switch]$WaitForRevocation
+)
 
 $ErrorActionPreference = 'Stop'
 $keycloak = 'http://localhost:8181'
@@ -131,6 +137,23 @@ $activated = Wait-Until { $t = Call 'GET' "$gateway/orders/$orderId/timeline" $s
 Check 'the order timeline has the Activated step with the device id' ($activated -and (@($activated | Where-Object { $_.step -eq 'Activated' })[0].detail -eq $deviceId))
 $final = Call 'GET' "$gateway/orders/$orderId" $shopToken
 Check 'the order is shipped and in use' ($final.status -eq 'Shipped' -and [bool]$final.activatedAt)
+
+if ($Return -or $WaitForRevocation) {
+    Step 'The person returns the goods: the purchase grant is at risk'
+    $null = Call 'POST' "$gateway/orders/$orderId/return" $shopToken
+    $risk = Wait-Until { $e = Call 'GET' "$greenhaus/me/entitlements" $appToken; $s = @($e.sources | Where-Object { $_.status -eq 'at_risk' }); if ($s.Count) { $e } } 'the grant to become at risk'
+    Check 'the grant is at risk, with the deadline to resolve it' ([bool]$risk -and [bool]@($risk.sources)[0].graceEndsAt)
+    Check 'the person keeps the tier during the grace period' ($risk.tier -eq 'gardener')
+
+    if ($WaitForRevocation) {
+        Step 'The grace period ends: the grant is revoked and the tier falls back'
+        $back = Wait-Until { $e = Call 'GET' "$greenhaus/me/entitlements" $appToken; if ($e.tier -eq 'novice') { $e } } 'the tier to fall back to Novice' 120
+        Check 'the tier is Novice again' ([bool]$back)
+        Check 'no purchase grant is listed any more' ($back -and @($back.sources | Where-Object { $_.type -eq 'purchase_grant' }).Count -eq 0)
+        $kept = Call 'GET' "$greenhaus/pots/$($pot.id)" $appToken
+        Check 'the pot and its device are kept (nothing is deleted on a downgrade)' ($kept.id -eq $pot.id)
+    }
+}
 
 # ---------------------------------------------------------------------------------------------------------------------
 Write-Host ''

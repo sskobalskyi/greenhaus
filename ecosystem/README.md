@@ -10,6 +10,8 @@ Orderflow (the shop), Pulse (devices) and the Greenhaus services run together on
 ./ecosystem/down.ps1    # stop (add -Volumes to delete the data)
 ```
 
+The story also has a sad branch: `./ecosystem/e2e.ps1 -Return` returns the goods and checks the purchase grant goes to at risk with a deadline while the person keeps the tier. With `./ecosystem/up.ps1 -ShortGrace` (grace of 20 seconds instead of 7 days) `./ecosystem/e2e.ps1 -WaitForRevocation` also waits for the revocation, checks the tier falls back to Novice and that the pot and its device are kept.
+
 Needs Docker and PowerShell. `up.ps1 -Refresh` exports the projects again from the latest `origin/main`.
 
 ## How it fits together
@@ -30,6 +32,7 @@ Each step asserts something another project must have done: the order's customer
 
 ## Known limits
 
+- A returned order cannot be un-returned: the contract has no event for undoing a return, so an at-risk grant is only ever revoked.
 - It is a manual check, not part of CI: it needs three repositories and about ten containers.
 - Passwords, the client secret and the realm are development data.
 - Both Orderflow and Pulse use their own Keycloak on port 8180 when run alone, so they cannot run side by side that way. Here neither starts it.
