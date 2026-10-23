@@ -108,10 +108,11 @@ Locally the service runs with `Auth__Mode=Development`, which trusts an `X-User-
 docker compose -f docker-compose.yml -f docker-compose.auth.yml --profile real up -d --build api keycloak
 $env:VITE_OIDC_AUTHORITY = "http://localhost:8181/realms/greenhaus"; $env:VITE_MOCK = "false"
 $env:VITE_API_BASE = "http://localhost:8091/api/greenhaus/v1"
+$env:VITE_BILLING_BASE = "http://localhost:8092/api/billing/v1"   # the real billing service instead of the mock
 npm run dev -w @greenhaus/web   # http://localhost:5174
 ```
 
-The app sends a signed-out person to Keycloak (in the app's language), where anyone can register (or use `demo` / `demo`). The API validates the token's issuer and the audience `greenhaus-api`, and `/me` is created from the token on the first call. The plans and the set-up guide can be read without an account; everything else asks for one. Sign-out ends the Keycloak session. See [ADR 4](docs/adr/0004-sign-in.md). The same realm also holds the clients of Orderflow and Pulse, so one account works across the projects ([ADR 7](docs/adr/0007-shared-identity.md)).
+The app sends a signed-out person to Keycloak (in the app's language), where anyone can register (or use `demo` / `demo`). The API validates the token's issuer and the audience `greenhaus-api`, and `/me` is created from the token on the first call. With the real billing, choosing a plan subscribes through it (a demo payment method, nothing real is charged), and the new tier reaches the Greenhaus API through billing's event, so the app looks again for a few seconds. The plans and the set-up guide can be read without an account; everything else asks for one. Sign-out ends the Keycloak session. See [ADR 4](docs/adr/0004-sign-in.md). The same realm also holds the clients of Orderflow and Pulse, so one account works across the projects ([ADR 7](docs/adr/0007-shared-identity.md)).
 
 The sign-in flow is covered by an automated browser test against this stack (a visitor reads the plans, is sent to Keycloak, registers and comes back signed in, sees the language of the app on the Keycloak pages, and sign-out really ends the session):
 

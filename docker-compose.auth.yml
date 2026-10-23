@@ -30,3 +30,13 @@ services:
       Auth__RequireHttpsMetadata: "false"
     depends_on:
       - keycloak
+
+  billing:
+    environment:
+      Auth__Mode: Keycloak
+      Auth__Authority: http://keycloak:8080/realms/greenhaus
+      Auth__Issuer: http://localhost:8181/realms/greenhaus
+      Auth__Audience: greenhaus-api
+      Auth__RequireHttpsMetadata: "false"
+    depends_on:
+      - keycloak
