@@ -38,7 +38,8 @@
       "requirements": "Requirements",
       "controls": "Controls",
       "care": "Care",
-      "devices": "Devices"
+      "devices": "Devices",
+      "assistant": "Assistant"
     },
     "view": {
       "label": "View",

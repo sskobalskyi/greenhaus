@@ -38,7 +38,8 @@
       "requirements": "Вимоги",
       "controls": "Керування",
       "care": "Догляд",
-      "devices": "Пристрої"
+      "devices": "Пристрої",
+      "assistant": "Помічник"
     },
     "view": {
       "label": "Вигляд",

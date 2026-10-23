@@ -22,7 +22,7 @@ export type AssistantStatus =
   | 'fallback'
   | 'error'
   | 'unavailable'
-  /** The monthly questions are used up. */
+  /** The last question was refused because the monthly questions are used up (the lock itself follows used and limit). */
   | 'limit'
 
 export interface AssistantPanelProps {
@@ -61,7 +61,8 @@ export function AssistantPanel({
   const { t } = useTranslation()
   const id = useId()
   const asking = status === 'asking'
-  const exhausted = status === 'limit' || used >= limit
+  // The quota decides, not the last refusal, so a plan change that raises the limit unlocks the input at once.
+  const exhausted = used >= limit
   const trimmed = question.trim()
   const canAsk = trimmed.length > 0 && !asking && !exhausted
 

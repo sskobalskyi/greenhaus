@@ -8,7 +8,8 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        // The hover shade moves away from the text colour, so the contrast of the label does not drop while the pointer is on the button.
+        default: "bg-primary text-primary-foreground hover:bg-[color-mix(in_oklab,var(--primary),black_10%)] dark:hover:bg-[color-mix(in_oklab,var(--primary),white_10%)]",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
         outline:
