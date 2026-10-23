@@ -84,21 +84,33 @@ public sealed class OpenApiContract
         var mediaType = response.Content.Headers.ContentType?.MediaType ?? "";
         var media = content[mediaType]
             ?? throw new Xunit.Sdk.XunitException($"{method} {pathTemplate} {status} returned {mediaType}, the contract documents: {string.Join(", ", content.Select(c => c.Key))}");
+        // A server-sent event stream is described as an array of events: each `data:` line is checked against the item schema.
+        if (mediaType == "text/event-stream")
+        {
+            var eventSchema = media["schema"]?["items"] ?? throw new Xunit.Sdk.XunitException($"{method} {pathTemplate} {status} is an event stream whose schema has no items");
+            var events = body.Replace("\r\n", "\n").Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
+                .Select(e => e.Trim()).Where(e => e.StartsWith("data:", StringComparison.Ordinal)).Select(e => e["data:".Length..].Trim()).ToList();
+            Xunit.Assert.True(events.Count > 0, $"{method} {pathTemplate} {status} sent no events. Body: {body}");
+            foreach (var evt in events) Evaluate(eventSchema, evt, $"{method} {pathTemplate} {status} event");
+            return;
+        }
+
         var schemaNode = media["schema"];
         if (schemaNode is null) return;
+        Evaluate(schemaNode, body, $"{method} {pathTemplate} {status}");
+    }
 
+    private void Evaluate(JsonNode schemaNode, string json, string what)
+    {
         var schema = JsonSchema.FromText(Rewrite(schemaNode.DeepClone()).ToJsonString(), _buildOptions);
-        using var instance = JsonDocument.Parse(body);
+        using var instance = JsonDocument.Parse(json);
         var result = schema.Evaluate(instance.RootElement, new EvaluationOptions { OutputFormat = OutputFormat.List, RequireFormatValidation = true });
-        if (!result.IsValid)
-        {
-            var errors = result.Details
-                .Where(d => d.Errors is { Count: > 0 })
-                .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"))
-                .Distinct();
-            throw new Xunit.Sdk.XunitException(
-                $"{method} {pathTemplate} {status} does not match the schema:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}{Environment.NewLine}Body: {body}");
-        }
+        if (result.IsValid) return;
+        var errors = result.Details
+            .Where(d => d.Errors is { Count: > 0 })
+            .SelectMany(d => d.Errors!.Select(e => $"{d.InstanceLocation}: {e.Value}"))
+            .Distinct();
+        throw new Xunit.Sdk.XunitException($"{what} does not match the schema:{Environment.NewLine}{string.Join(Environment.NewLine, errors)}{Environment.NewLine}Body: {json}");
     }
 
     private bool IsSecured(JsonNode operation) =>
