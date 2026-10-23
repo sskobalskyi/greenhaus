@@ -57,6 +57,9 @@ $env:PULSE_URL = 'http://host.docker.internal:5080/api/pulse/v2'
 $env:PULSE_TOKEN_URL = 'http://host.docker.internal:8181/realms/greenhaus/protocol/openid-connect/token'
 $env:PULSE_CLIENT_ID = 'pulse-service'
 $env:PULSE_CLIENT_SECRET = 'pulse-dev-secret'
+$env:DOCSBRAIN_TOKEN_URL = $env:PULSE_TOKEN_URL
+$env:DOCSBRAIN_CLIENT_ID = 'greenhaus-assistant'
+$env:DOCSBRAIN_CLIENT_SECRET = 'greenhaus-assistant-dev-secret'
 docker compose -p eco-greenhaus --project-directory $greenhaus --profile real `
     -f "$greenhaus/docker-compose.yml" -f "$greenhaus/docker-compose.auth.yml" -f "$greenhaus/ecosystem/greenhaus.yml" `
     up -d --build api billing fulfilment keycloak
