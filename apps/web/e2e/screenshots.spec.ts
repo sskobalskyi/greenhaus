@@ -70,6 +70,19 @@ for (const look of looks) {
     await page.screenshot({ path: path.join(out, `requirements-${look.name}.png`), fullPage: true })
   })
 
+  test(`assistant ${look.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 900 })
+    await open(page, '/', look)
+    await page.locator('a', { hasText: 'Kitchen herbs' }).click()
+    await page.locator('[role="tab"]').nth(6).click()
+    await page.locator('textarea').fill(look.locale === 'uk' ? 'Чому в’януть листки?' : 'Why are the leaves drooping?')
+    await page.locator('form button[type="submit"]').click()
+    await page.locator('p', { hasText: /plants look fine|рослини виглядають/ }).waitFor()
+    await page.waitForLoadState('networkidle')
+    await page.waitForTimeout(400)
+    await page.screenshot({ path: path.join(out, `assistant-${look.name}.png`), fullPage: true })
+  })
+
   test(`plans ${look.name}`, async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 })
     await open(page, '/plans', look, null)

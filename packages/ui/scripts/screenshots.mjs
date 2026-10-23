@@ -1,5 +1,6 @@
 // Captures key stories from the built Storybook in light/English and dark/Ukrainian, for the README.
 //   npm run build-storybook && npm run screenshots
+// With a name, only that story is captured:  npm run screenshots -- assistant-answered
 import { createReadStream, existsSync, mkdirSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
 import path from 'node:path'
@@ -28,6 +29,7 @@ const stories = [
   ['tier-cards', 'greenhaus-tiercard--side-by-side', 1200],
   ['requirement-bands', 'greenhaus-requirementband--all-metrics', 480],
   ['care-task', 'greenhaus-caretaskitem--from-ph-sensor', 520],
+  ['assistant-answered', 'greenhaus-assistantpanel--answered', 760],
 ]
 const looks = [
   ['light-en', 'locale:en;theme:light'],
@@ -37,6 +39,7 @@ const looks = [
 const browser = await chromium.launch()
 const page = await browser.newPage({ deviceScaleFactor: 2 })
 for (const [name, id, width] of stories) {
+  if (process.argv[2] && process.argv[2] !== name) continue
   for (const [look, globals] of looks) {
     await page.setViewportSize({ width, height: 800 })
     await page.goto(`http://localhost:${port}/iframe.html?id=${id}&viewMode=story&globals=${globals}`)

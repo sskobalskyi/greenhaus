@@ -168,7 +168,7 @@ Done: the contracts and the mock; the design system and the product app (with Ke
 Still to do:
 
 - **Pulse:** live readings and commands over MQTT (the app polls every ten seconds, and Pulse has no rules or commands endpoints yet, so run and kill-switch commands answer `pulse_not_supported`).
-- **Docs-Brain:** an assistant panel scoped to a pot, with data access by tier.
+- **Docs-Brain:** the assistant tab in the app is built against the mock (streamed answer, sources, quota, what the plan lets it see). The real service endpoint and the Docs-Brain integration are next.
 - **Billing:** a returned order cannot be un-returned (the contract has no event for it), and a subscription that stays `past_due` is not cancelled automatically.
 - **Orderflow:** nothing open on the Greenhaus side.
 - **Later:** achievements (last, by decision), encrypting the packing secrets at rest, an ESP32 sketch for the MQTT topics.
