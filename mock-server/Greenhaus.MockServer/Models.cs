@@ -318,6 +318,11 @@ public class Calibration
     public DateTimeOffset? CalibratedAt { get; set; }
 }
 
+public class AssistantQuestion
+{
+    public string? Question { get; set; }
+}
+
 public class CareTaskCreate
 {
     public string? Title { get; set; }
