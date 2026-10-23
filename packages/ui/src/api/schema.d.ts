@@ -521,6 +521,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's notifications, newest first
+         * @description What happened that the person should know: an alert, a controller going offline, a care task that is due, a plan change.
+         *     The server sends no user-facing text, only a `kind` and its `params`, and clients translate them.
+         */
+        get: operations["listNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark one notification read
+         * @description Idempotent. A notification of someone else answers `404`.
+         */
+        post: operations["markNotificationRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark every notification of the caller read */
+        post: operations["markAllNotificationsRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/pots/{potId}/assistant/ask": {
         parameters: {
             query?: never;
@@ -955,6 +1015,28 @@ export interface components {
             reason?: string;
             /** @description With `done` and `answer`. */
             tokens?: number;
+        };
+        Notification: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * @description What happened. `params` carry the facts the text needs: `metric`, `direction`, `value`, `zone` for alerts, `deviceId`,
+             *     `actuatorId` and `reason` for a blocked actuator, `title` for a care task, `from`, `to` and `until` for plans.
+             * @enum {string}
+             */
+            kind: "alert_raised" | "alert_resolved" | "device_offline" | "device_online" | "actuator_blocked" | "care_task_due" | "plan_changed" | "plan_at_risk" | "automation_suggestion";
+            /**
+             * Format: uuid
+             * @description The pot it is about, when there is one
+             */
+            potId?: string;
+            params: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt?: string | null;
         };
         ClaimPreview: {
             deviceId: string;
@@ -1896,6 +1978,72 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    listNotifications: {
+        parameters: {
+            query?: {
+                /** @description Only the notifications that have not been read */
+                unread?: boolean;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notifications */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"][];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+        };
+    };
+    markNotificationRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notificationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The notification */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Notification"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    markAllNotificationsRead: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Done */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     askAssistant: {

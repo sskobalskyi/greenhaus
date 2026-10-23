@@ -75,6 +75,9 @@ public class ContractTests
 
         // claims
         Assert.Equal(HttpStatusCode.OK, (await api.Call("GET", "/claims/preview", query: "deviceId=ghx-demo-0001&token=demo-token")).StatusCode);
+        var walkNotifications = await api.Node(await api.Call("GET", "/notifications"));
+        Assert.Equal(HttpStatusCode.OK, (await api.Call("POST", "/notifications/{notificationId}/read", new { notificationId = walkNotifications[0]!["id"]!.GetValue<string>() })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await api.Call("POST", "/notifications/read-all")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = kitchenId }, new { question = "Is my basil ok?" })).StatusCode);
         Assert.Equal(HttpStatusCode.Created, (await api.Call("POST", "/claims", body: new { deviceId = "ghx-demo-0001", token = "demo-token", potId = kitchenId })).StatusCode);
 
@@ -365,5 +368,39 @@ public class ContractTests
 
         Assert.Equal(HttpStatusCode.BadRequest, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = pot }, new { question = "" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await api.Call("POST", "/pots/{potId}/assistant/ask", new { potId = Guid.NewGuid() }, new { question = "Hi" })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Notifications_come_newest_first_and_reading_them_changes_the_unread_list()
+    {
+        using var api = new Api();
+
+        var all = await api.Node(await api.Call("GET", "/notifications"));
+        Assert.Equal(3, all.AsArray().Count);
+        var times = all.AsArray().Select(n => n!["createdAt"]!.GetValue<DateTimeOffset>()).ToList();
+        Assert.Equal(times.OrderByDescending(t => t), times);
+
+        var unread = await api.Node(await api.Call("GET", "/notifications", query: "unread=true"));
+        Assert.Equal(2, unread.AsArray().Count);
+        Assert.All(unread.AsArray(), n => Assert.Null(n!["readAt"]));
+
+        var id = unread[0]!["id"]!.GetValue<string>();
+        var read = await api.Node(await api.Call("POST", "/notifications/{notificationId}/read", new { notificationId = id }));
+        Assert.NotNull(read["readAt"]);
+        // Reading again changes nothing.
+        var again = await api.Node(await api.Call("POST", "/notifications/{notificationId}/read", new { notificationId = id }));
+        Assert.Equal(read["readAt"]!.GetValue<DateTimeOffset>(), again["readAt"]!.GetValue<DateTimeOffset>());
+        Assert.Single((await api.Node(await api.Call("GET", "/notifications", query: "unread=true"))).AsArray());
+
+        Assert.Equal(HttpStatusCode.NoContent, (await api.Call("POST", "/notifications/read-all")).StatusCode);
+        Assert.Empty((await api.Node(await api.Call("GET", "/notifications", query: "unread=true"))).AsArray());
+    }
+
+    [Fact]
+    public async Task Notification_requests_are_validated()
+    {
+        using var api = new Api();
+        Assert.Equal(HttpStatusCode.BadRequest, (await api.Call("GET", "/notifications", query: "limit=0")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await api.Call("POST", "/notifications/{notificationId}/read", new { notificationId = Guid.NewGuid() })).StatusCode);
     }
 }

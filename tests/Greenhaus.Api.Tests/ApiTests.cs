@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Greenhaus.Api.Persistence;
 using Greenhaus.Domain;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Greenhaus.Api.Tests;
 
@@ -35,6 +36,11 @@ public class ApiTests(GreenhausFixture api)
         await Json(Call(user, "PATCH", "/me", body: new { locale = "uk" }), HttpStatusCode.OK);
         await Json(Call(user, "GET", "/me/entitlements"), HttpStatusCode.OK);
         await Json(Call(user, "GET", "/tiers"), HttpStatusCode.OK);
+
+        await api.WithServices(async s => { await s.GetRequiredService<Greenhaus.Api.Infrastructure.IUserNotifier>().NotifyAsync(user, null, "plan_changed", new Dictionary<string, string> { ["from"] = "druid", ["to"] = "gardener" }, default); return 0; });
+        var notifications = await Json(Call(user, "GET", "/notifications"), HttpStatusCode.OK);
+        await Json(Call(user, "POST", "/notifications/{notificationId}/read", new { notificationId = notifications[0]!["id"]!.GetValue<string>() }), HttpStatusCode.OK);
+        await Json(Call(user, "POST", "/notifications/read-all"), HttpStatusCode.NoContent);
         await Json(Call(user, "GET", "/species", query: "query=basil"), HttpStatusCode.OK);
         await Json(Call(user, "GET", "/species/{speciesId}", new { speciesId = "basil" }), HttpStatusCode.OK);
 
