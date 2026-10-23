@@ -19,6 +19,7 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
     public DbSet<CareTaskEntity> Tasks => Set<CareTaskEntity>();
     public DbSet<OutboxMessageEntity> Outbox => Set<OutboxMessageEntity>();
     public DbSet<InboxMessageEntity> Inbox => Set<InboxMessageEntity>();
+    public DbSet<AssistantUsageEntity> AssistantUsage => Set<AssistantUsageEntity>();
     public DbSet<DeviceOrderEntity> DeviceOrders => Set<DeviceOrderEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
@@ -123,6 +124,13 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
             e.Property(x => x.Traceparent).HasMaxLength(64);
             e.Property(x => x.Type).HasMaxLength(64);
             e.Property(x => x.Payload).HasColumnType("jsonb");
+        });
+
+        model.Entity<AssistantUsageEntity>(e =>
+        {
+            e.ToTable("assistant_usage");
+            e.HasKey(x => new { x.UserId, x.Month });
+            e.Property(x => x.UserId).HasMaxLength(64);
         });
 
         model.Entity<InboxMessageEntity>(e =>

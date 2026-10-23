@@ -121,6 +121,18 @@ docker compose up -d mock                     # for the prices on the plans page
 npm run e2e:auth -w @greenhaus/web            # starts the web app itself and waits for the stack
 ```
 
+### The pot assistant
+
+`POST /pots/{potId}/assistant/ask` asks the Docs-Brain assistant about a pot and streams the answer. The tier decides the monthly quota (10, 100, 500; only answered questions count) and how much the assistant is told: the pot and its plants, plus the latest readings and alerts, plus the last days and the logs. It needs Docs-Brain (its `main`, with the mock provider offline) and a token source:
+
+```powershell
+$env:DOCSBRAIN_URL = "http://host.docker.internal:5090"
+$env:DOCSBRAIN_TOKEN_URL = "http://host.docker.internal:8181/realms/greenhaus/protocol/openid-connect/token"
+$env:DOCSBRAIN_CLIENT_ID = "greenhaus-assistant"; $env:DOCSBRAIN_CLIENT_SECRET = "greenhaus-assistant-dev-secret"
+```
+
+Without them the endpoint answers `503 assistant_unavailable`. See [ADR 9](docs/adr/0009-pot-assistant.md).
+
 ### Against a live Pulse
 
 Checked against Pulse `main` (device registry, JWT, channels) with its Keycloak: Greenhaus asks for a client-credentials token of `pulse-service` and claims a shipped device, reads its state and latest readings, and stores calibration. Rules and commands are in the Pulse contract but not in Pulse yet, so syncing alert rules and sending run or kill-switch commands answers `pulse_not_supported`: the pot's own data stays correct, a run is refused with 503 and the rules follow when Pulse offers them.

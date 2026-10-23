@@ -75,6 +75,7 @@ public class ApiTests(GreenhausFixture api)
         await Json(Call(user, "GET", "/claims/preview", query: $"deviceId={deviceId}&token=secret-token"), HttpStatusCode.OK);
         await Json(Call(user, "POST", "/claims", body: new { deviceId, token = "secret-token", potId }), HttpStatusCode.Created);
         await Json(Call(user, "GET", "/pots/{potId}/devices", route), HttpStatusCode.OK);
+        Assert.Equal(HttpStatusCode.OK, (await Call(user, "POST", "/pots/{potId}/assistant/ask", route, new { question = "Is my basil ok?" })).StatusCode);
         await Json(Call(user, "PUT", "/pots/{potId}/actuators/{actuatorId}/mode", new { potId, actuatorId = "heater" }, new { mode = "notify" }), HttpStatusCode.OK);
         await Json(Call(user, "POST", "/pots/{potId}/actuators/{actuatorId}/run", new { potId, actuatorId = "pump" }, new { durationSeconds = 10 }), HttpStatusCode.Accepted);
         await Json(Call(user, "PUT", "/pots/{potId}/actuators/{actuatorId}/limits", new { potId, actuatorId = "pump" }, new { maxRunSeconds = 10, minIntervalSeconds = 900, dailyCapSeconds = 60 }), HttpStatusCode.OK);
@@ -83,8 +84,7 @@ public class ApiTests(GreenhausFixture api)
         await Json(Call(user, "DELETE", "/pots/{potId}/plants/{plantId}", new { potId, plantId = plant["id"]!.GetValue<string>() }), HttpStatusCode.NoContent);
         await Call(user, "DELETE", "/pots/{potId}", route);
 
-        // The assistant endpoint is in the contract and the mock, and the service gets it in its own change.
-        api.Client.AssertCovers("askAssistant");
+        api.Client.AssertCovers();
     }
 
     [Fact]

@@ -65,6 +65,16 @@ public partial class Program
         builder.Services.Configure<PulseOptions>(configuration.GetSection("Pulse"));
         builder.Services.AddClaimRateLimit();
         builder.Services.AddScoped<DeviceSync>();
+        builder.Services.Configure<DocsBrainOptions>(configuration.GetSection("DocsBrain"));
+        builder.Services.AddSingleton<DocsBrainTokens>();
+        builder.Services.AddHttpClient("docsbrain-token");
+        builder.Services.AddHttpClient<IAssistantClient, HttpAssistantClient>(client =>
+        {
+            client.BaseAddress = new Uri((configuration["DocsBrain:BaseUrl"] ?? new DocsBrainOptions().BaseUrl).TrimEnd('/') + "/");
+            // An answer streams for a while, but not forever.
+            client.Timeout = TimeSpan.FromMinutes(2);
+        });
+        builder.Services.AddScoped<AssistantContextService>();
         builder.Services.AddSingleton<PulseTokens>();
         builder.Services.AddTransient<PulseTokenHandler>();
         builder.Services.AddHttpClient("pulse-token");
@@ -121,6 +131,7 @@ public partial class Program
         api.MapControls();
         api.MapCare();
         api.MapClaims();
+        api.MapAssistant();
 
         return app;
     }

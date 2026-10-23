@@ -178,3 +178,12 @@ public class DeviceOrderEntity
     public required string CustomerId { get; set; }
     public DateTimeOffset AllocatedAt { get; set; }
 }
+
+/// <summary>Assistant questions answered for a user in a calendar month (UTC). One row per user and month.</summary>
+public class AssistantUsageEntity
+{
+    public required string UserId { get; set; }
+    /// <summary>The first day of the month.</summary>
+    public DateOnly Month { get; set; }
+    public int Count { get; set; }
+}

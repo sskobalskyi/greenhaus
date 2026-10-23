@@ -60,6 +60,13 @@ services:
       Pulse__TokenUrl: ${PULSE_TOKEN_URL:-}
       Pulse__ClientId: ${PULSE_CLIENT_ID:-}
       Pulse__ClientSecret: ${PULSE_CLIENT_SECRET:-}
+      # The pot assistant is Docs-Brain. Nothing is called until a token source is set: DOCSBRAIN_TOKEN_URL with the
+      # client credentials of `greenhaus-assistant` in the shared realm, or a fixed DOCSBRAIN_TOKEN for local runs.
+      DocsBrain__BaseUrl: ${DOCSBRAIN_URL:-http://host.docker.internal:5090}
+      DocsBrain__StaticToken: ${DOCSBRAIN_TOKEN:-}
+      DocsBrain__TokenUrl: ${DOCSBRAIN_TOKEN_URL:-}
+      DocsBrain__ClientId: ${DOCSBRAIN_CLIENT_ID:-}
+      DocsBrain__ClientSecret: ${DOCSBRAIN_CLIENT_SECRET:-}
     ports:
       - "8091:8080"
     restart: unless-stopped

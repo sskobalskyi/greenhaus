@@ -43,7 +43,7 @@ public sealed class EntitlementService(GreenhausDbContext db, IOptions<Entitleme
         {
             Tier = tier,
             Limits = LimitsDto.From(TierPolicy.LimitsFor(tier)),
-            Usage = new UsageDto { Pots = potCount, AiQuestionsThisMonth = 0 },
+            Usage = new UsageDto { Pots = potCount, AiQuestionsThisMonth = await AssistantUsage.CountAsync(db, userId, clock.GetUtcNow(), ct) },
             Sources = sources,
         };
     }
