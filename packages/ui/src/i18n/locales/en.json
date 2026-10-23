@@ -1,4 +1,31 @@
 {
+  "assistant": {
+    "title": "Ask about this pot",
+    "label": "Your question",
+    "placeholder": "For example: why are the basil leaves drooping?",
+    "counter": "{{count}} of {{max}} characters",
+    "ask": "Ask",
+    "asking": "Asking...",
+    "thinking": "Thinking about it...",
+    "answer": "Answer",
+    "sources": "Sources",
+    "source": "Source {{number}}",
+    "quota": "{{used}} of {{limit}} questions used this month",
+    "quotaLabel": "Questions used this month",
+    "data": {
+      "none": "The assistant knows this pot and its plants, but not its readings. A higher plan lets it see them.",
+      "current": "The assistant also sees the current readings and open alerts of this pot.",
+      "history": "The assistant also sees the recent history of the readings and the care log of this pot."
+    },
+    "fallback": {
+      "retrieval_only": "The assistant could not write an answer right now, so these are the passages that match your question. This did not count as one of your questions.",
+      "no_results": "The assistant found nothing about this. Try asking in other words. This did not count as one of your questions."
+    },
+    "error": "The assistant could not answer. Please try again.",
+    "unavailable": "The assistant is not available right now. Please try again in a moment.",
+    "retry": "Try again",
+    "limit": "You have used all {{limit}} questions of this month. A higher plan has more."
+  },
   "common": {
     "loading": "Loading",
     "mockUnavailable": "The mock server is not reachable. Start it with: docker compose up mock",

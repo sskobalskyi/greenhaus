@@ -39,6 +39,8 @@ Vite, React 19, TypeScript, Tailwind CSS 4, shadcn/ui (Radix), lucide icons, i18
 | `PotZoneMap` | A heatmap of one metric across the zones of a pot or bed, with a metric picker |
 | `ActuatorControl` | Mode (`Off`, `Notify only`, `Auto`), manual run and safety limits. Auto is locked by tier and says which tier unlocks it |
 | `TierCard` | A subscription tier with its limits in plain words |
+| `AssistantPanel` | Ask the plant assistant about a pot: the streamed answer, its sources, fallbacks, errors and the quota. Props only |
+| `QuotaMeter` | How many of the month's assistant questions are used |
 | `CareTaskItem` | A care task with its origin, such as a pH sensor suggestion |
 | `LanguageSwitcher`, `ThemeToggle` | Language and theme |
 

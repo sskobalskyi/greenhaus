@@ -49,13 +49,14 @@ import {
   useZones,
 } from '~/api/hooks'
 import { ApiError } from '~/api/http'
+import { AssistantTab } from '~/components/assistant-tab'
 import { BlockSkeleton, LoadError } from '~/components/feedback'
 import { CalibrationDialog, CareForm, PotActions, RequirementsTab } from '~/components/pot-tools'
 import { UpsellDialog } from '~/components/upsell-dialog'
 
 type Pot = Schemas['Pot']
 
-const tabs = ['overview', 'plants', 'requirements', 'controls', 'care', 'devices'] as const
+const tabs = ['overview', 'plants', 'requirements', 'controls', 'care', 'devices', 'assistant'] as const
 
 function errorText(t: (key: string) => string, error: unknown): string {
   if (error instanceof ApiError) {
@@ -490,6 +491,9 @@ export function PotPage() {
         </TabsContent>
         <TabsContent value="devices" className="pt-4">
           <Devices pot={pot.data} />
+        </TabsContent>
+        <TabsContent value="assistant" className="pt-4">
+          <AssistantTab potId={pot.data.id} onPlanLimit={setUpsell} />
         </TabsContent>
       </Tabs>
 
