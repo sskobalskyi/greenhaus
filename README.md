@@ -18,10 +18,9 @@ Greenhaus owns everything that is specific to plants: users and tiers, pots, zon
 
 ## Status
 
-**Alpha.** Contracts and the mock can change without notice, and there is no product code yet. Work lands through pull requests.
+**Alpha.** The services below run and are tested, but the project is a local demo, not a deployment. Work lands through pull requests.
 
-The first stream is the contract layer: HTTP APIs in OpenAPI, events and MQTT topics in AsyncAPI, and a mock backend that serves them so the UI and the services can be built in parallel. The Greenhaus API mock is running and contract-tested. The billing and Pulse mocks are next.
-
+What exists: the contracts (OpenAPI and AsyncAPI) with a contract-tested mock; the Greenhaus API, billing and fulfilment services on PostgreSQL, RabbitMQ and Keycloak; the design system and the product app; and a check that runs the whole story across Orderflow, Pulse and these services (`ecosystem/`).
 ## Layout
 
 ```
@@ -164,15 +163,15 @@ dotnet test tests/Greenhaus.Fulfilment.Tests          # real PostgreSQL and Rabb
 ## Roadmap
 
 
-Done: contracts, the mock backend (Greenhaus, billing, Pulse), the design system and the product app, all contract-tested and covered by end-to-end tests.
+Done: the contracts and the mock; the design system and the product app (with Keycloak sign-in, public plans and the real billing); the **Greenhaus API** (pots, plants, zones, requirements, tiers, controls, care, claims), **billing** (plans, subscriptions, invoices, purchase grants with the grace period) and **fulfilment** (device allocation, shipping, retirement), all contract-tested against real PostgreSQL and RabbitMQ; one shared Keycloak realm; the kits in the shop; and the end-to-end story across the projects, including the return branch.
 
-Waiting for the real services, which the app will use through the same contracts:
+Still to do:
 
-- **Greenhaus API:** pots, plants, zones, requirements, tiers, controls and care run on PostgreSQL with sign-in through Keycloak, and exchange events over RabbitMQ. Still to come: a first run against a live Pulse, and Keycloak login in the web app (it runs against the service today with `VITE_MOCK=false` and the development sign-in).
-- **Pulse:** live readings and commands over MQTT (the app polls every ten seconds today), and device allocation from order events.
+- **Pulse:** live readings and commands over MQTT (the app polls every ten seconds, and Pulse has no rules or commands endpoints yet, so run and kill-switch commands answer `pulse_not_supported`).
 - **Docs-Brain:** an assistant panel scoped to a pot, with data access by tier.
-- **Orderflow:** Greenhaus kit products in its catalog (through its `Catalog:SeedFile`), and consuming `device.claimed.v1` to show an order as activated.
-- **Later:** achievements (last, by decision), the real billing service, an ESP32 sketch for the same MQTT topics.
+- **Billing:** a returned order cannot be un-returned (the contract has no event for it), and a subscription that stays `past_due` is not cancelled automatically.
+- **Orderflow:** nothing open on the Greenhaus side.
+- **Later:** achievements (last, by decision), encrypting the packing secrets at rest, an ESP32 sketch for the MQTT topics.
 ## Licence
 
 MIT, see [LICENSE](LICENSE).
