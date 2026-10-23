@@ -62,6 +62,11 @@ public partial class Program
         builder.Services.AddSingleton(_ => SpeciesCatalog.Load(configuration["Species:Path"] ?? "data/species.json"));
         builder.Services.AddScoped<EntitlementService>();
         builder.Services.AddScoped<EventPublisher>();
+        builder.Services.AddScoped<UserNotifier>();
+        builder.Services.AddScoped<IUserNotifier>(sp => sp.GetRequiredService<UserNotifier>());
+        builder.Services.AddScoped<CareReminders>();
+        builder.Services.AddHostedService<CareReminderJob>();
+        builder.Services.Configure<NotificationOptions>(configuration.GetSection("Notifications"));
         builder.Services.Configure<PulseOptions>(configuration.GetSection("Pulse"));
         builder.Services.AddClaimRateLimit();
         builder.Services.AddScoped<DeviceSync>();
@@ -132,6 +137,7 @@ public partial class Program
         api.MapCare();
         api.MapClaims();
         api.MapAssistant();
+        api.MapNotifications();
 
         return app;
     }

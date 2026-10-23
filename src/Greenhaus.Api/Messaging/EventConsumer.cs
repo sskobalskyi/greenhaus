@@ -115,6 +115,9 @@ public static class EventHandlers
         "device.allocated.v1" => DeviceAllocated(payload, services, ct),
         "device.retired.v1" => DeviceRetired(payload, services, ct),
         "command.completed.v1" => CommandCompleted(payload, services, ct),
+        "alert.raised.v1" => NotificationHandlers.AlertAsync(payload, true, services, ct),
+        "alert.resolved.v1" => NotificationHandlers.AlertAsync(payload, false, services, ct),
+        "device.status.v1" => NotificationHandlers.DeviceStatusAsync(payload, services, ct),
         _ => throw new InvalidDataException($"No handler for {routingKey}"),
     };
 
@@ -125,8 +128,9 @@ public static class EventHandlers
         var source = reason.StartsWith("grant_", StringComparison.Ordinal) ? "purchase_grant" : "subscription";
         var status = reason switch { "grant_at_risk" => "at_risk", "payment_failed" => "past_due", _ => "active" };
         var validUntil = p.TryGetProperty("validUntil", out var v) && v.ValueKind == JsonValueKind.String ? v.GetDateTimeOffset() : (DateTimeOffset?)null;
-        await services.GetRequiredService<EntitlementService>()
+        var applied = await services.GetRequiredService<EntitlementService>()
             .SetAsync(p.GetProperty("userId").GetString()!, tier, source, status, validUntil, p.GetProperty("at").GetDateTimeOffset(), ct);
+        await NotificationHandlers.PlanAsync(p, applied, services, ct);
     }
 
     private static async Task DeviceAllocated(JsonElement p, IServiceProvider services, CancellationToken ct)

@@ -21,6 +21,7 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
     public DbSet<InboxMessageEntity> Inbox => Set<InboxMessageEntity>();
     public DbSet<AssistantUsageEntity> AssistantUsage => Set<AssistantUsageEntity>();
     public DbSet<DeviceOrderEntity> DeviceOrders => Set<DeviceOrderEntity>();
+    public DbSet<NotificationEntity> Notifications => Set<NotificationEntity>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -145,6 +146,18 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
             e.ToTable("device_orders");
             e.HasKey(x => x.DeviceId);
             e.Property(x => x.DeviceId).HasMaxLength(64);
+        });
+
+        model.Entity<NotificationEntity>(e =>
+        {
+            e.ToTable("notifications");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UserId).HasMaxLength(64);
+            e.Property(x => x.Kind).HasMaxLength(32);
+            e.Property(x => x.ParamsJson).HasColumnType("jsonb");
+            e.Property(x => x.DedupeKey).HasMaxLength(200);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => new { x.UserId, x.DedupeKey }).IsUnique().HasFilter("\"DedupeKey\" IS NOT NULL");
         });
 
         model.Entity<CareTaskEntity>(e =>
