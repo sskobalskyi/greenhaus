@@ -1,4 +1,34 @@
 {
+  "notifications": {
+    "title": "Сповіщення",
+    "empty": "Сповіщень ще немає.",
+    "unread": "Непрочитане",
+    "markAll": "Позначити всі прочитаними",
+    "bell_one": "Сповіщення, {{count}} непрочитане",
+    "bell_few": "Сповіщення, {{count}} непрочитані",
+    "bell_many": "Сповіщення, {{count}} непрочитаних",
+    "bell_other": "Сповіщення, {{count}} непрочитаних",
+    "bellNone": "Сповіщення, непрочитаних немає",
+    "direction": { "below": "нижче норми", "above": "вище норми" },
+    "kind": {
+      "alert_raised": "{{metric}}: {{direction}}",
+      "alert_raised_noData": "Немає показників: {{metric}}",
+      "alert_resolved": "{{metric}}: знову в нормі",
+      "device_offline": "Контролер втратив зв’язок",
+      "device_online": "Контролер знову на зв’язку",
+      "actuator_blocked": "Безпека зупинила пристрій: {{actuator}}",
+      "care_task_due": "Час для догляду: {{title}}",
+      "plan_changed": "План змінено: {{from}} → {{to}}",
+      "plan_at_risk": "План «{{tier}}» під загрозою",
+      "automation_suggestion": "Підказка від автоматики"
+    },
+    "detail": {
+      "value": "Показник: {{value}}",
+      "zone": "Рядок {{row}}, стовпець {{col}}",
+      "planChanged": "Безпека лишається ввімкненою. Автоматика вище рівня «{{to}}» перейде в режим сповіщень.",
+      "planAtRisk": "Вирішіть питання з поверненням до {{date}}, щоб зберегти план."
+    }
+  },
   "assistant": {
     "title": "Запитайте про цей горщик",
     "label": "Ваше запитання",
