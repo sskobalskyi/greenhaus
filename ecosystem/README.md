@@ -29,11 +29,12 @@ The compose files of each project are used as they are, plus one small file each
 
 ## What the check proves
 
-Each step asserts something another project must have done: the order's customer is the same Keycloak subject the Greenhaus API sees, billing's grant reaches that subject as a Gardener tier, fulfilment's `device.allocated.v1` makes Pulse register the device with the kit's channels and actuators, the shop's `order.shipped.v1` makes fulfilment ship it in Pulse, the pot's target becomes an alert rule in Pulse and a reading that breaks it raises an alert that reaches the person as a notification, the claim binds the device to the person in Pulse and links it to a pot, a reading sent to Pulse shows in the pot's status, the assistant (Docs-Brain, mock AI) answers a question about the pot from the facts Greenhaus gave it, including the reading, and the question counts against the monthly quota, and the claim event marks the order as in use in the shop.
+Each step asserts something another project must have done: the order's customer is the same Keycloak subject the Greenhaus API sees, billing's grant reaches that subject as a Gardener tier, fulfilment's `device.allocated.v1` makes Pulse register the device with the kit's channels and actuators, the shop's `order.shipped.v1` makes fulfilment ship it in Pulse, the pot's target becomes an alert rule in Pulse and a reading that breaks it raises an alert that reaches the person as a notification, the pump on auto makes the control loop decide to water and send a run command that Pulse queues for the device (and the person's manual run does the same, with the audit log saying who asked), the claim binds the device to the person in Pulse and links it to a pot, a reading sent to Pulse shows in the pot's status, the assistant (Docs-Brain, mock AI) answers a question about the pot from the facts Greenhaus gave it, including the reading, and the question counts against the monthly quota, and the claim event marks the order as in use in the shop.
 
 ## Known limits
 
 - A returned order cannot be un-returned: the contract has no event for undoing a return, so an at-risk grant is only ever revoked.
+- Commands reach Pulse's queue but nothing executes them yet: the MQTT bridge and the kit emulator are not there, so the check stops at "Pulse holds the command".
 - It is a manual check, not part of CI: it needs three repositories and about ten containers.
 - Passwords, the client secret and the realm are development data.
 - Both Orderflow and Pulse use their own Keycloak on port 8180 when run alone, so they cannot run side by side that way. Here neither starts it.
