@@ -73,6 +73,31 @@ function useInvalidate() {
   return (...parts: unknown[]) => client.invalidateQueries({ queryKey: key(...parts) })
 }
 
+/** What happened that the person should know. Polled while signed in, so the bell stays current without a push channel. */
+export const useNotifications = () =>
+  useQuery({
+    queryKey: key('notifications'),
+    queryFn: () => api<S['Notification'][]>('/notifications?limit=50'),
+    enabled: useSignedIn(),
+    refetchInterval: 30_000,
+  })
+
+export function useMarkNotificationRead() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: (id: string) => api<S['Notification']>(`/notifications/${id}/read`, { method: 'POST' }),
+    onSuccess: () => invalidate('notifications'),
+  })
+}
+
+export function useMarkAllNotificationsRead() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: () => api<void>('/notifications/read-all', { method: 'POST' }),
+    onSuccess: () => invalidate('notifications'),
+  })
+}
+
 export function useCreatePot() {
   const invalidate = useInvalidate()
   return useMutation({

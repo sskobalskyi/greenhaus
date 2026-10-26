@@ -1,4 +1,32 @@
 {
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet.",
+    "unread": "Unread",
+    "markAll": "Mark all as read",
+    "bell_one": "Notifications, {{count}} unread",
+    "bell_other": "Notifications, {{count}} unread",
+    "bellNone": "Notifications, nothing unread",
+    "direction": { "below": "too low", "above": "too high" },
+    "kind": {
+      "alert_raised": "{{metric}}: {{direction}}",
+      "alert_raised_noData": "No readings of {{metric}}",
+      "alert_resolved": "{{metric}}: back in range",
+      "device_offline": "Your controller went offline",
+      "device_online": "Your controller is back online",
+      "actuator_blocked": "Safety stopped the {{actuator}}",
+      "care_task_due": "Care task due: {{title}}",
+      "plan_changed": "Your plan changed from {{from}} to {{to}}",
+      "plan_at_risk": "Your {{tier}} plan is at risk",
+      "automation_suggestion": "A suggestion from the automation"
+    },
+    "detail": {
+      "value": "Reading: {{value}}",
+      "zone": "Row {{row}}, column {{col}}",
+      "planChanged": "Safety stays on. Automation beyond the {{to}} level falls back to notify only.",
+      "planAtRisk": "Resolve the return by {{date}} to keep it."
+    }
+  },
   "assistant": {
     "title": "Ask about this pot",
     "label": "Your question",

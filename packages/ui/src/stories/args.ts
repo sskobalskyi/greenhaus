@@ -151,3 +151,29 @@ export const task = (overrides: Partial<Schemas['CareTask']> = {}): Schemas['Car
   origin: 'species_schedule',
   ...overrides,
 })
+
+let notificationCounter = 0
+export const notification = (over: Partial<Schemas['Notification']> = {}): Schemas['Notification'] => ({
+  id: `30000000-0000-4000-8000-${String(++notificationCounter).padStart(12, '0')}`,
+  kind: 'alert_raised',
+  potId: '10000000-0000-4000-8000-000000000001',
+  params: { metric: 'soil_moisture', direction: 'below', value: '31.5' },
+  createdAt: '2026-10-22T09:30:00Z',
+  readAt: null,
+  ...over,
+})
+
+/** One of every kind, a mix of unread and read, for the list stories. */
+export const notificationSet = (): Schemas['Notification'][] => [
+  notification({ createdAt: '2026-10-22T09:30:00Z' }),
+  notification({ kind: 'alert_raised', params: { metric: 'temperature', direction: 'above', value: '31', zoneRow: '1', zoneCol: '2' }, createdAt: '2026-10-22T09:10:00Z' }),
+  notification({ kind: 'alert_raised', params: { metric: 'soil_moisture', rule: 'no_data' }, createdAt: '2026-10-22T08:50:00Z' }),
+  notification({ kind: 'alert_resolved', params: { metric: 'light' }, createdAt: '2026-10-22T08:40:00Z', readAt: '2026-10-22T08:45:00Z' }),
+  notification({ kind: 'device_offline', params: { deviceId: 'ghx-0001' }, createdAt: '2026-10-22T08:20:00Z' }),
+  notification({ kind: 'device_online', params: { deviceId: 'ghx-0001' }, createdAt: '2026-10-22T08:25:00Z', readAt: '2026-10-22T08:26:00Z' }),
+  notification({ kind: 'actuator_blocked', params: { actuatorId: 'pump', kind: 'pump', reason: 'No change after 3 runs, the tank may be empty' }, createdAt: '2026-10-21T20:00:00Z' }),
+  notification({ kind: 'care_task_due', params: { title: 'Fertilize: Basil' }, createdAt: '2026-10-21T07:00:00Z' }),
+  notification({ kind: 'plan_changed', potId: undefined, params: { from: 'druid', to: 'gardener' }, createdAt: '2026-10-20T12:00:00Z', readAt: '2026-10-20T12:30:00Z' }),
+  notification({ kind: 'plan_at_risk', potId: undefined, params: { tier: 'gardener', until: '2026-10-29T12:00:00Z' }, createdAt: '2026-10-20T11:00:00Z' }),
+  notification({ kind: 'automation_suggestion', params: { message: 'Soil moisture often drops at night, consider a lower minimum' }, createdAt: '2026-10-19T10:00:00Z' }),
+]

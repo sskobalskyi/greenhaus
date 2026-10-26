@@ -1,10 +1,10 @@
-import { Badge, LanguageSwitcher, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, ThemeToggle, type Tier } from '@greenhaus/ui'
+import { Badge, LanguageSwitcher, NotificationBell, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, ThemeToggle, type Tier } from '@greenhaus/ui'
 import { Leaf } from 'lucide-react'
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { NavLink, Outlet, useLocation } from 'react-router'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router'
 import { isLeaving, signIn, signOut, useAuth } from '~/auth/auth'
-import { useEntitlements } from '~/api/hooks'
+import { useEntitlements, useMarkAllNotificationsRead, useMarkNotificationRead, useNotifications } from '~/api/hooks'
 import { mockTier, setMockTier } from '~/api/http'
 
 const link = ({ isActive }: { isActive: boolean }) =>
@@ -35,6 +35,10 @@ function Shell() {
   const { t } = useTranslation()
   const auth = useAuth()
   const entitlements = useEntitlements()
+  const notifications = useNotifications()
+  const markRead = useMarkNotificationRead()
+  const markAllRead = useMarkAllNotificationsRead()
+  const navigate = useNavigate()
   const current = mockTier()
 
   return (
@@ -104,6 +108,16 @@ function Shell() {
                   {t('app.auth.signIn')}
                 </button>
               ))}
+            {(!auth.enabled || auth.user) && (
+              <NotificationBell
+                notifications={notifications.data ?? []}
+                onReadAll={() => markAllRead.mutate()}
+                onOpen={(n) => {
+                  if (!n.readAt) markRead.mutate(n.id)
+                  if (n.potId) void navigate(`/pots/${n.potId}`)
+                }}
+              />
+            )}
             <LanguageSwitcher />
             <ThemeToggle />
           </div>
