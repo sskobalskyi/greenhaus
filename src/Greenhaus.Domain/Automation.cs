@@ -37,7 +37,11 @@ public sealed record AutomationDecision(
     bool Demand,
     bool Record,
     int FruitlessRuns,
-    double? StartValue)
+    double? StartValue,
+    Metric? Metric = null,
+    double? Value = null,
+    double? Limit = null,
+    string? Direction = null)
 {
     public static AutomationDecision Quiet(bool demand = false, int fruitlessRuns = 0) =>
         new(AutomationAction.None, 0, "none", "", "automation", demand, false, fruitlessRuns, null);
@@ -145,7 +149,7 @@ public static class AutomationRules
 
         if (actuator.Mode == ControlMode.Notify)
             return new AutomationDecision(AutomationAction.Suggest, 0, "suggest",
-                $"{Capital(what)} is {Format(first.Value)}, {relation} the target {Format(limit)}. Run the {actuator.Kind.ToString().ToLowerInvariant()} to fix it", "automation", true, true, actuator.FruitlessRuns, null);
+                $"{Capital(what)} is {Format(first.Value)}, {relation} the target {Format(limit)}. Run the {actuator.Kind.ToString().ToLowerInvariant()} to fix it", "automation", true, true, actuator.FruitlessRuns, null, first.Trigger.Metric, first.Value, limit, relation);
 
         // Auto from here on.
         if (actuator.Kind == ActuatorKind.Heater && !actuator.ThermalCutoffDeclared)
@@ -170,7 +174,7 @@ public static class AutomationRules
         var allowed = actuator.Limits.MaxFruitlessRuns ?? DefaultMaxFruitlessRuns;
         if (fruitless >= allowed)
             return new AutomationDecision(AutomationAction.Block, 0, "dry_run",
-                $"{fruitless} runs in a row did not change the {what}. The {actuator.Kind.ToString().ToLowerInvariant()} is stopped, check it (an empty tank or a broken part)", "safety", true, true, fruitless, null);
+                $"{fruitless} runs in a row did not change the {what}. The {actuator.Kind.ToString().ToLowerInvariant()} is stopped, check it (an empty tank or a broken part)", "safety", true, true, fruitless, null, first.Trigger.Metric, first.Value, limit, relation);
 
         var seconds = Math.Min(Math.Min(actuator.Limits.MaxRunSeconds, DefaultRunSeconds(actuator.Kind)), remaining);
         return new AutomationDecision(AutomationAction.Run, seconds, DemandCode(actuator.Kind),

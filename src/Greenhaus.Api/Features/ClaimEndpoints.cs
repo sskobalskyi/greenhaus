@@ -82,7 +82,8 @@ public static class ClaimEndpoints
             var limits = ActuatorPolicy.DefaultLimits(kind, hard);
             db.Actuators.Add(new ActuatorEntity
             {
-                PotId = pot.Id, Id = a.Id, DeviceId = device.Id, Kind = kind, Mode = ControlMode.Off,
+                PotId = pot.Id, Id = a.Id, DeviceId = device.Id, // A new actuator starts in notify-only until the person turns automatic control on (spec 4a).
+                Kind = kind, Mode = ControlMode.Notify,
                 MaxRunSeconds = limits.MaxRunSeconds, MinIntervalSeconds = limits.MinIntervalSeconds, DailyCapSeconds = limits.DailyCapSeconds, MaxFruitlessRuns = limits.MaxFruitlessRuns,
                 HardMaxRunSeconds = hard.MaxRunSeconds, HardMinIntervalSeconds = hard.MinIntervalSeconds, HardDailyCapSeconds = hard.DailyCapSeconds,
             });

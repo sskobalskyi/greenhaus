@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Greenhaus.Api.Auth;
+using Greenhaus.Api.Automation;
 using Greenhaus.Api.Features;
 using Greenhaus.Api.Infrastructure;
 using Greenhaus.Api.Messaging;
@@ -70,6 +71,11 @@ public partial class Program
         builder.Services.Configure<PulseOptions>(configuration.GetSection("Pulse"));
         builder.Services.AddClaimRateLimit();
         builder.Services.AddScoped<DeviceSync>();
+builder.Services.Configure<AutomationOptions>(configuration.GetSection("Automation"));
+builder.Services.AddScoped<TierClamp>();
+builder.Services.AddScoped<AutomationCycle>();
+builder.Services.AddSingleton<AutomationRunner>();
+if (configuration.GetValue("Automation:Enabled", true)) builder.Services.AddHostedService<AutomationLoop>();
         builder.Services.Configure<DocsBrainOptions>(configuration.GetSection("DocsBrain"));
         builder.Services.AddSingleton<DocsBrainTokens>();
         builder.Services.AddHttpClient("docsbrain-token");

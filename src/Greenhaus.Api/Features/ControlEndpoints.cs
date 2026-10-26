@@ -1,4 +1,5 @@
 using Greenhaus.Api.Auth;
+using Greenhaus.Api.Automation;
 using Greenhaus.Api.Contracts;
 using Greenhaus.Api.Infrastructure;
 using Greenhaus.Api.Persistence;
@@ -32,14 +33,14 @@ public static class ControlEndpoints
             return Results.Ok(result.ToList());
         });
 
-        api.MapGet("/pots/{potId:guid}/actuators", async (Guid potId, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, CancellationToken ct) =>
+        api.MapGet("/pots/{potId:guid}/actuators", async (Guid potId, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, TimeProvider clock, CancellationToken ct) =>
         {
             var user = http.User.UserId();
             var pot = await db.OwnedPotAsync(potId, user, ct);
             if (pot is null) return Problems.NotFound();
             var tier = await entitlements.TierOfAsync(user, ct);
             var actuators = await db.Actuators.AsNoTracking().Where(a => a.PotId == potId).OrderBy(a => a.Id).ToListAsync(ct);
-            return Results.Ok(actuators.Select(a => ToDto(a, pot, tier)).ToList());
+            return Results.Ok(actuators.Select(a => ToDto(a, pot, tier, clock.GetUtcNow())).ToList());
         });
 
         api.MapPut("/pots/{potId:guid}/actuators/{actuatorId}/mode", async (Guid potId, string actuatorId, ModeUpdate body, HttpContext http, GreenhausDbContext db, EntitlementService entitlements, EventPublisher events, TimeProvider clock, CancellationToken ct) =>
@@ -70,9 +71,11 @@ public static class ControlEndpoints
 
             var before = actuator.Mode;
             actuator.Mode = body.Mode.Value;
+            // The person looked at the actuator: a block from the safety stop ends and old suggestions are forgotten.
+            ActuatorBook.Reset(actuator);
             db.AddAudit(potId, "user", "mode_changed", $"{before} -> {actuator.Mode}".ToLowerInvariant(), actuator.Id, null, clock);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(ToDto(actuator, pot, tier));
+            return Results.Ok(ToDto(actuator, pot, tier, clock.GetUtcNow()));
         });
 
         api.MapPost("/pots/{potId:guid}/actuators/{actuatorId}/run", async (Guid potId, string actuatorId, RunRequest body, HttpContext http, GreenhausDbContext db, ICommandSender commands, TimeProvider clock, CancellationToken ct) =>
@@ -89,7 +92,7 @@ public static class ControlEndpoints
             Guid commandId;
             try { commandId = await commands.RunAsync(actuator.DeviceId, actuator.Id, seconds, ct); }
             catch (PulseException e) { return PulseProblems.From(e); }
-            actuator.LastRunAt = clock.GetUtcNow();
+            ActuatorBook.RecordManualRun(actuator, seconds, clock.GetUtcNow());
             db.AddAudit(potId, "user", "run", $"{seconds} s requested by the user", actuator.Id, null, clock, commandId);
             await db.SaveChangesAsync(ct);
             return Results.Json(new CommandReceiptDto { CommandId = commandId, Status = "sent" }, statusCode: 202);
@@ -112,7 +115,7 @@ public static class ControlEndpoints
             actuator.MaxFruitlessRuns = body.MaxFruitlessRuns;
             db.AddAudit(potId, "user", "limit_changed", "Safety limits tightened", actuator.Id, null, clock);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(ToDto(actuator, pot, await entitlements.TierOfAsync(user, ct)));
+            return Results.Ok(ToDto(actuator, pot, await entitlements.TierOfAsync(user, ct), clock.GetUtcNow()));
         });
 
         api.MapPut("/pots/{potId:guid}/kill-switch", async (Guid potId, KillSwitchUpdate body, HttpContext http, GreenhausDbContext db, DeviceSync sync, TimeProvider clock, CancellationToken ct) =>
@@ -155,13 +158,13 @@ public static class ControlEndpoints
         });
     }
 
-    private static ActuatorDto ToDto(ActuatorEntity a, PotEntity pot, Tier tier)
+    private static ActuatorDto ToDto(ActuatorEntity a, PotEntity pot, Tier tier, DateTimeOffset now)
     {
         var metric = ActuatorPolicy.MetricFor(a.Kind);
         return new ActuatorDto
         {
             Id = a.Id, Kind = a.Kind, Metric = metric, Mode = a.Mode,
-            State = pot.KillSwitch ? ActuatorState.Blocked : ActuatorState.Idle,
+            State = ActuatorBook.StateOf(a, pot, now),
             MaxModeForTier = TierPolicy.LimitsFor(tier).MaxModeFor(metric),
             Limits = new SafetyLimitsDto { MaxRunSeconds = a.MaxRunSeconds, MinIntervalSeconds = a.MinIntervalSeconds, DailyCapSeconds = a.DailyCapSeconds, MaxFruitlessRuns = a.MaxFruitlessRuns },
             HardLimits = new SafetyLimitsDto { MaxRunSeconds = a.HardMaxRunSeconds, MinIntervalSeconds = a.HardMinIntervalSeconds, DailyCapSeconds = a.HardDailyCapSeconds },

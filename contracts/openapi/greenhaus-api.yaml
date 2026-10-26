@@ -1270,6 +1270,9 @@ components:
           description: |
             What happened. `params` carry the facts the text needs: `metric`, `direction`, `value`, `zone` for alerts, `deviceId`,
             `actuatorId` and `reason` for a blocked actuator, `title` for a care task, `from`, `to` and `until` for plans.
+            A suggestion for an actuator in notify-only mode and a blocked actuator also carry `pot`, `actuatorKind`, and for the
+            suggestion `metric`, `value`, `target` and `direction`. A plan change carries `lowered` when automation that the lower plan no
+            longer includes was switched to notify-only (a comma-separated list such as "heater of Kitchen herbs").
         potId: { type: string, format: uuid, description: 'The pot it is about, when there is one' }
         params:
           type: object

@@ -47,6 +47,7 @@ public interface IPulseClient
     Task CalibrateAsync(string deviceId, string channelId, double dryRaw, double wetRaw, CancellationToken ct);
     Task<PulseCommand> RunActuatorAsync(string deviceId, string actuatorId, int seconds, Guid commandId, DateTimeOffset expiresAt, CancellationToken ct);
     Task SetKillSwitchAsync(string deviceId, string actuatorId, bool enabled, Guid commandId, DateTimeOffset expiresAt, CancellationToken ct);
+    Task<PulseCommand> StopActuatorAsync(string deviceId, string actuatorId, Guid commandId, DateTimeOffset expiresAt, CancellationToken ct);
     /// <summary>The newest reading of a channel since the given time, or null when there is none.</summary>
     Task<(double Value, DateTimeOffset At)?> LatestAsync(string deviceId, string channelId, DateTimeOffset since, CancellationToken ct);
     /// <summary>The readings of one channel between two moments at a resolution (raw, 1m or 1h), oldest first. Empty when there are none.</summary>
@@ -87,6 +88,14 @@ public sealed class HttpPulseClient(HttpClient http) : IPulseClient
     {
         using var response = await Send(HttpMethod.Post, $"devices/{Uri.EscapeDataString(deviceId)}/commands",
             new { commandId, type = "run_actuator", actuatorId, durationSeconds = seconds, expiresAt }, ct);
+        var command = await Read<CommandWire>(response!, ct);
+        return new PulseCommand(command.CommandId, command.Status);
+    }
+
+    public async Task<PulseCommand> StopActuatorAsync(string deviceId, string actuatorId, Guid commandId, DateTimeOffset expiresAt, CancellationToken ct)
+    {
+        using var response = await Send(HttpMethod.Post, $"devices/{Uri.EscapeDataString(deviceId)}/commands",
+            new { commandId, type = "stop_actuator", actuatorId, expiresAt }, ct);
         var command = await Read<CommandWire>(response!, ct);
         return new PulseCommand(command.CommandId, command.Status);
     }
@@ -222,6 +231,9 @@ public sealed class PulseCommandSender(IPulseClient pulse, TimeProvider clock) :
 {
     public async Task<Guid> RunAsync(string deviceId, string actuatorId, int seconds, CancellationToken ct) =>
         (await pulse.RunActuatorAsync(deviceId, actuatorId, seconds, Guid.NewGuid(), clock.GetUtcNow().AddMinutes(2), ct)).CommandId;
+
+    public async Task<Guid> StopAsync(string deviceId, string actuatorId, CancellationToken ct) =>
+        (await pulse.StopActuatorAsync(deviceId, actuatorId, Guid.NewGuid(), clock.GetUtcNow().AddMinutes(2), ct)).CommandId;
 }
 
 /// <summary>Turns what the pot demands into the alert rules a device enforces.</summary>

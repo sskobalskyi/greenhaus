@@ -107,6 +107,9 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
             e.HasKey(x => new { x.PotId, x.Id });
             e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16);
             e.Property(x => x.Mode).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.State).HasConversion<string>().HasMaxLength(16);
+            e.Property(x => x.BlockedReason).HasMaxLength(40);
+            e.Property(x => x.LastNoteCode).HasMaxLength(40);
         });
 
         model.Entity<AuditEntity>(e =>

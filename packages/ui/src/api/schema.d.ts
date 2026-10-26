@@ -1024,6 +1024,9 @@ export interface components {
             /**
              * @description What happened. `params` carry the facts the text needs: `metric`, `direction`, `value`, `zone` for alerts, `deviceId`,
              *     `actuatorId` and `reason` for a blocked actuator, `title` for a care task, `from`, `to` and `until` for plans.
+             *     A suggestion for an actuator in notify-only mode and a blocked actuator also carry `pot`, `actuatorKind`, and for the
+             *     suggestion `metric`, `value`, `target` and `direction`. A plan change carries `lowered` when automation that the lower plan no
+             *     longer includes was switched to notify-only (a comma-separated list such as "heater of Kitchen herbs").
              * @enum {string}
              */
             kind: "alert_raised" | "alert_resolved" | "device_offline" | "device_online" | "actuator_blocked" | "care_task_due" | "plan_changed" | "plan_at_risk" | "automation_suggestion";
