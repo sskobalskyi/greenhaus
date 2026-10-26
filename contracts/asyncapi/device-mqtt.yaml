@@ -144,10 +144,10 @@ components:
         type: object
         required: [ts, value]
         properties:
-          ts: { type: string, format: date-time, description: Device time, UTC }
+          ts: { type: string, format: date-time, description: 'Device time, UTC' }
           value: { type: number }
           raw: { type: number, description: Raw sensor value before calibration }
-          seq: { type: integer, description: Monotonic counter, lets the bridge spot gaps }
+          seq: { type: integer, description: 'Monotonic counter, lets the bridge spot gaps' }
     State:
       name: state
       title: Controller state
