@@ -87,4 +87,5 @@ Wait-Url 'http://localhost:8091/health' 'Greenhaus API'
 Wait-Url 'http://localhost:8092/health' 'Greenhaus billing'
 Wait-Url 'http://localhost:8093/health' 'Greenhaus fulfilment'
 Wait-Url 'http://localhost:5090/health' 'Docs-Brain API'
+& "$greenhaus/ecosystem/ingest-care.ps1"
 Write-Host 'The ecosystem is up. Run ./ecosystem/e2e.ps1 for the end-to-end check, ./ecosystem/down.ps1 to stop it.'

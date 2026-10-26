@@ -133,6 +133,7 @@ Check 'the pot status shows the reading from the device' ([bool]$status)
 
 # ---------------------------------------------------------------------------------------------------------------------
 Step 'The person asks the assistant about the pot'
+$null = Call 'POST' "$greenhaus/pots/$($pot.id)/plants" $appToken @{ speciesId = 'basil'; nickname = 'Basil on the sill' }
 $before = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth
 $request = @{ Method = 'Post'; Uri = "$greenhaus/pots/$($pot.id)/assistant/ask"; Headers = @{ Authorization = "Bearer $appToken" }; ContentType = 'application/json'; UseBasicParsing = $true
               Body = (@{ question = 'Is the soil moisture of my pot ok?' } | ConvertTo-Json -Compress) }
@@ -146,6 +147,15 @@ Check 'the assistant answered' ($done.mode -eq 'answer') "(mode $($done.mode), r
 Check 'the answer is grounded in the pot''s reading (31.5)' ($answer -match '31\.5') "(answer: $answer)"
 $after = Wait-Until { $u = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth; if ($u -eq ($before + 1)) { $u } } 'the question to be counted'
 Check 'the question counts against the monthly quota' ($null -ne $after)
+
+# A species question is answered from the shared care corpus, which every user's assistant can cite.
+$care = @{ Method = 'Post'; Uri = "$greenhaus/pots/$($pot.id)/assistant/ask"; Headers = @{ Authorization = "Bearer $appToken" }; ContentType = 'application/json'; UseBasicParsing = $true
+           Body = (@{ question = 'How should I water basil?' } | ConvertTo-Json -Compress) }
+$careStream = Invoke-WebRequest @care
+$careEvents = @($careStream.Content -split "`n`n" | Where-Object { $_.Trim().StartsWith('data:') } | ForEach-Object { $_.Trim().Substring(5).Trim() | ConvertFrom-Json })
+$sources = @($careEvents | Where-Object { $_.type -eq 'sources' } | ForEach-Object { $_.sources })
+$basil = @($sources | Where-Object { $_.shared -eq $true -and $_.title -like 'Basil*' })
+Check 'the answer cites the shared care text for basil' ($basil.Count -ge 1) "(sources: $(($sources | ForEach-Object { $_.title }) -join '; '))"
 
 # ---------------------------------------------------------------------------------------------------------------------
 Step 'The shop shows the order as in use'
