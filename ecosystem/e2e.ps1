@@ -55,6 +55,13 @@ function Call([string]$method, [string]$url, [string]$token, $body = $null) {
     if ($response.Content) { $response.Content | ConvertFrom-Json } else { $null }
 }
 
+# Docker talks on stderr even when all is well (and a container that is not there is an error for it): run it without letting that stop the script.
+function Invoke-Docker {
+    $before = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try { & docker @args 2>&1 | Out-String } finally { $ErrorActionPreference = $before }
+}
+
 function Read-Subject([string]$jwt) {
     $p = $jwt.Split('.')[1].Replace('-', '+').Replace('_', '/'); while ($p.Length % 4) { $p += '=' }
     ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p)) | ConvertFrom-Json).sub
@@ -103,6 +110,27 @@ Check 'Pulse registered the device as allocated' ($registered.state -eq 'allocat
 Check 'its channels and actuators came from the kit' ($registered.capabilities.channels.Count -ge 3 -and $registered.capabilities.actuators.Count -ge 1)
 
 # ---------------------------------------------------------------------------------------------------------------------
+Step 'The kit powers on: a controller flashed with the packing bundle connects to the broker with its own credential'
+# The emulator reads the bundle of the order (its id and broker password, which exist only until the order ships) and connects
+# to the EMQX of Pulse (host port 1884). The broker asks Pulse who may connect. A pot kit with dry soil: 34 percent, below the target of 40, and one run of the pump (10 seconds, 0.8 points a second) lifts it above.
+$null = Invoke-Docker rm -f "eco-kit-$deviceId"
+$null = Invoke-Docker run -d --name "eco-kit-$deviceId" --add-host host.docker.internal:host-gateway greenhaus-kit-emulator `
+    --broker host.docker.internal:1884 --provision-from http://host.docker.internal:8093/api/fulfilment/v1 --order $orderId --token $adminToken `
+    --initial soil=34 --interval 2
+Check 'the emulated controller started, flashed with the allocated device' ($LASTEXITCODE -eq 0)
+$online = Wait-Until { $d = Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId" $service; if ($d.connection -eq 'online') { $d } } 'Pulse to see the controller online'
+Check 'Pulse sees the controller online (the status it said over MQTT)' ([bool]$online)
+
+# The same controller with a wrong password is refused by the broker, which would not take over the real one's session.
+$null = Invoke-Docker run -d --name "eco-kit-wrong-$deviceId" --add-host host.docker.internal:host-gateway greenhaus-kit-emulator `
+    --broker host.docker.internal:1884 --device "${deviceId}:GH-POT-KIT-01" --credential "${deviceId}=not-the-credential"
+$refusedLog = Wait-Until { $log = Invoke-Docker logs "eco-kit-wrong-$deviceId"; if ($log -match 'broker not reachable') { $log } } 'the wrong password to be refused'
+Check 'a controller with a wrong password is refused by the broker' ([bool]$refusedLog -and $refusedLog -notmatch 'connected to') "(log: $refusedLog)"
+$null = Invoke-Docker rm -f "eco-kit-wrong-$deviceId"
+$stillOnline = Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId" $service
+Check 'the real controller is still connected' ($stillOnline.connection -eq 'online')
+
+# ---------------------------------------------------------------------------------------------------------------------
 Step 'The shop ships the order and the device becomes claimable'
 $shopAdmin = Get-Token 'orderflow-web' 'admin' 'admin'
 $null = Call 'POST' "$gateway/admin/orders/$orderId/ship" $shopAdmin @{}
@@ -126,20 +154,18 @@ Check 'the pot has the kit''s pump with limits inside the hardware limits' ((@($
 # ---------------------------------------------------------------------------------------------------------------------
 Step 'The device reports and the pot shows it'
 $soil = @($claimed.capabilities.channels | Where-Object { $_.metric -eq 'soil_moisture' })[0]
-$reading = @{ deviceId = $deviceId; metric = 'soil_moisture'; channel = $soil.id; value = 31.5; timestamp = (Get-Date).ToUniversalTime().ToString('o') }
-$null = Invoke-WebRequest -Method Post -Uri "$pulse/api/telemetry" -Headers @{ Authorization = "Bearer $service" } -ContentType 'application/json' -Body ('[' + ($reading | ConvertTo-Json -Compress) + ']') -UseBasicParsing
-$status = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appToken; if (@($s.zones.metrics | Where-Object { $_.metric -eq 'soil_moisture' -and $_.value -eq 31.5 }).Count) { $s } } 'the reading in the pot status'
-Check 'the pot status shows the reading from the device' ([bool]$status)
+$status = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appToken; if (@($s.zones.metrics | Where-Object { $_.metric -eq 'soil_moisture' -and $null -ne $_.value }).Count) { $s } } 'the reading in the pot status'
+Check 'the pot status shows a reading the controller sent over MQTT' ([bool]$status)
+$firstSoil = @($status.zones.metrics | Where-Object { $_.metric -eq 'soil_moisture' })[0].value
+Check 'it is the dry soil the controller started with (about 34 percent)' ($firstSoil -ge 33 -and $firstSoil -le 35) "(value $firstSoil)"
 
 # ---------------------------------------------------------------------------------------------------------------------
-Step 'The pot has a target and the device breaks it: Pulse raises an alert and the person is notified'
+Step 'The pot has a target and the dry soil breaks it: Pulse raises an alert and the person is notified'
 $requirements = Call 'GET' "$greenhaus/pots/$($pot.id)/requirements" $appToken
 foreach ($m in $requirements.metrics) { if ($m.metric -eq 'soil_moisture') { $m.enabled = $true; $m | Add-Member -Force -NotePropertyName min -NotePropertyValue 40; $m | Add-Member -Force -NotePropertyName max -NotePropertyValue 70 } }
 $null = Call 'PUT' "$greenhaus/pots/$($pot.id)/requirements" $appToken $requirements
 $rules = Wait-Until { $r = @(Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/rules" $service); if (@($r | Where-Object { $_.kind -eq 'threshold' -and $_.channelId -eq $soil.id }).Count) { $r } } 'the threshold rule to reach Pulse'
 Check 'the target became an alert rule in Pulse' ([bool]$rules)
-$dry = @{ deviceId = $deviceId; metric = 'soil_moisture'; channel = $soil.id; value = 22.0; timestamp = (Get-Date).ToUniversalTime().ToString('o') }
-$null = Invoke-WebRequest -Method Post -Uri "$pulse/api/telemetry" -Headers @{ Authorization = "Bearer $service" } -ContentType 'application/json' -Body ('[' + ($dry | ConvertTo-Json -Compress) + ']') -UseBasicParsing
 $alert = Wait-Until { $n = Call 'GET' "$greenhaus/notifications?unread=true" $appToken; $hit = @($n | Where-Object { $_.kind -eq 'alert_raised' }); if ($hit.Count) { $hit[0] } } 'the alert notification'
 Check 'the person has an unread alert notification for this pot' ([bool]$alert -and $alert.potId -eq $pot.id) "(notification: $($alert | ConvertTo-Json -Compress))"
 $status2 = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appToken; if ($s.state -eq 'attention') { $s } } 'the pot to show attention'
@@ -154,15 +180,28 @@ $auto = Wait-Until { $l = @(Call 'GET' "$greenhaus/pots/$($pot.id)/audit-log" $a
 Check 'the control loop decided to water and wrote why in the audit log' ([bool]$auto) "(entry: $($auto | ConvertTo-Json -Compress))"
 $sent = Wait-Until { $c = @(Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/commands" $service | Where-Object { $_.type -eq 'run_actuator' -and $_.actuatorId -eq 'pump' }); if ($c.Count) { $c } } 'the automatic command in Pulse'
 Check 'Pulse holds the command the loop sent' ([bool]$sent)
+$commandId = @($sent)[0].commandId
+$finished = Wait-Until { $c = Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/commands/$commandId" $service; if ($c.status -in 'completed', 'rejected', 'failed', 'expired') { $c } } 'the controller to finish the command'
+Check 'the controller executed it and answered completed (Pulse recorded it)' ($finished.status -eq 'completed') "(command: $($finished | ConvertTo-Json -Compress))"
+$outcome = Wait-Until { $l = @(Call 'GET' "$greenhaus/pots/$($pot.id)/audit-log" $appToken | Where-Object { $_.actor -eq 'automation' -and $_.action -eq 'run' -and $_.outcome -eq 'completed' }); if ($l.Count) { $l[0] } } 'the audit log to say completed'
+Check 'the result came back to Greenhaus and the audit log entry says completed' ([bool]$outcome)
+$recovered = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appToken; $m = @($s.zones.metrics | Where-Object { $_.metric -eq 'soil_moisture' })[0]; if ($m.value -ge 40) { $s } } 'the soil to recover above the target' 90
+Check 'the soil recovered above the target (the pump really watered it)' ([bool]$recovered)
+$waterings = @(Call 'GET' "$greenhaus/pots/$($pot.id)/audit-log" $appToken | Where-Object { $_.actor -eq 'automation' -and $_.action -eq 'run' })
+Check 'the loop watered once and stopped: the soil is in range' ($waterings.Count -eq 1) "(automatic waterings: $($waterings.Count))"
 
 # ---------------------------------------------------------------------------------------------------------------------
-Step 'The person waters by hand: the command reaches the device through Pulse'
+Step 'The person waters by hand right after: the controller refuses, its own minimum interval protects the pump'
 $receipt = Call 'POST' "$greenhaus/pots/$($pot.id)/actuators/pump/run" $appToken @{ durationSeconds = 10 }
 Check 'Greenhaus accepted the run and gave a command id' ([bool]$receipt.commandId)
 $queued = Wait-Until { $c = @(Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/commands" $service | Where-Object { $_.commandId -eq $receipt.commandId }); if ($c.Count) { $c[0] } } 'the command in Pulse'
 Check 'Pulse holds the command for the device (queued or beyond)' ([bool]$queued -and $queued.type -eq 'run_actuator' -and $queued.actuatorId -eq 'pump') "(command: $($queued | ConvertTo-Json -Compress))"
 $log = Call 'GET' "$greenhaus/pots/$($pot.id)/audit-log" $appToken
 Check 'the audit log says who asked, the person, and which command' (@($log | Where-Object { $_.action -eq 'run' -and $_.actor -eq 'user' }).Count -ge 1)
+$refused = Wait-Until { $c = Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/commands/$($receipt.commandId)" $service; if ($c.status -in 'completed', 'rejected', 'failed', 'expired') { $c } } 'the controller to answer'
+Check 'the controller rejected it: the pump had just run (min_interval)' ($refused.status -eq 'rejected' -and $refused.reason -eq 'min_interval') "(command: $($refused | ConvertTo-Json -Compress))"
+$refusal = Wait-Until { $l = @(Call 'GET' "$greenhaus/pots/$($pot.id)/audit-log" $appToken | Where-Object { $_.actor -eq 'user' -and $_.action -eq 'run' -and $_.outcome -eq 'refused' }); if ($l.Count) { $l[0] } } 'the audit log to say refused'
+Check 'the audit log says the run was refused' ([bool]$refusal)
 
 # ---------------------------------------------------------------------------------------------------------------------
 Step 'The person asks the assistant about the pot'
@@ -177,7 +216,7 @@ $done = @($events | Where-Object { $_.type -eq 'done' })[0]
 $answer = (@($events | Where-Object { $_.type -eq 'token' } | ForEach-Object { $_.text }) -join '')
 Check 'the assistant answered' ($done.mode -eq 'answer') "(mode $($done.mode), reason $($done.reason))"
 # The mock AI of Docs-Brain builds its answer from what Greenhaus told it about the pot, so the latest reading and its state must show up in it.
-Check 'the answer is grounded in the pot''s latest reading (22, below the target)' ($answer -match '22' -and $answer -match 'below') "(answer: $answer)"
+Check 'the answer is grounded in the pot''s latest soil moisture reading' ($answer -match 'soil_moisture [0-9]') "(answer: $answer)"
 $after = Wait-Until { $u = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth; if ($u -eq ($before + 1)) { $u } } 'the question to be counted'
 Check 'the question counts against the monthly quota' ($null -ne $after)
 
@@ -196,6 +235,8 @@ $activated = Wait-Until { $t = Call 'GET' "$gateway/orders/$orderId/timeline" $s
 Check 'the order timeline has the Activated step with the device id' ($activated -and (@($activated | Where-Object { $_.step -eq 'Activated' })[0].detail -eq $deviceId))
 $final = Call 'GET' "$gateway/orders/$orderId" $shopToken
 Check 'the order is shipped and in use' ($final.status -eq 'Shipped' -and [bool]$final.activatedAt)
+
+$null = Invoke-Docker rm -f "eco-kit-$deviceId"
 
 if ($Return -or $WaitForRevocation) {
     Step 'The person returns the goods: the purchase grant is at risk'

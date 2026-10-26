@@ -2,9 +2,14 @@
 param([switch]$Volumes)
 
 $greenhaus = (Resolve-Path "$PSScriptRoot\..").Path
-$work = Join-Path (Split-Path $greenhaus -Parent) '.ecosystem'
+$cv = Split-Path $greenhaus -Parent
+while ($cv -and -not (Test-Path (Join-Path $cv 'orderflow'))) { $cv = Split-Path $cv -Parent }
+$work = Join-Path $cv '.ecosystem'
 $flag = if ($Volumes) { '-v' } else { $null }
 $env:GREENHAUS_DIR = $greenhaus.Replace('\', '/')
+
+# The controllers that e2e.ps1 started.
+docker ps -aq --filter "name=eco-kit-" | ForEach-Object { docker rm -f $_ | Out-Null }
 
 foreach ($name in 'orderflow', 'pulse', 'docs-brain') {
     $dir = Join-Path $work $name

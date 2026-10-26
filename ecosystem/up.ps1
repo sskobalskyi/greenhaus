@@ -9,15 +9,20 @@ param([switch]$Refresh, [switch]$ShortGrace)
 # Docker writes its progress to stderr, so native errors must not stop the script: exit codes are checked instead.
 $ErrorActionPreference = 'Continue'
 $greenhaus = (Resolve-Path "$PSScriptRoot\..").Path
+# The other projects sit next to this repository, or above it when this is a git worktree.
 $cv = Split-Path $greenhaus -Parent
+while ($cv -and -not (Test-Path (Join-Path $cv 'orderflow'))) { $cv = Split-Path $cv -Parent }
+if (-not $cv) { throw 'The orderflow, pulse and docs-brain repositories were not found next to this one' }
 $work = Join-Path $cv '.ecosystem'
 New-Item -ItemType Directory -Force $work | Out-Null
 
 # Pulse and Orderflow belong to other sessions and their working trees may hold unfinished work, so the stack is built from
 # a clean export of each project's main branch.
-function Export-Main([string]$repo) {
+function Export-Main([string]$repo, [string]$mustHave = '') {
     $target = Join-Path $work $repo
-    if ((Test-Path $target) -and -not $Refresh) { return $target }
+    # An export made before a project gained a file this script needs is stale, whatever -Refresh says.
+    $stale = $mustHave -ne '' -and -not (Test-Path (Join-Path $target $mustHave))
+    if ((Test-Path $target) -and -not $Refresh -and -not $stale) { return $target }
     $source = Join-Path $cv $repo
     git -C $source fetch -q origin
     $zip = Join-Path $work "$repo.zip"
@@ -39,7 +44,7 @@ function Wait-Url([string]$url, [string]$name, [int]$seconds = 180) {
 }
 
 $orderflow = Export-Main 'orderflow'
-$pulse = Export-Main 'pulse'
+$pulse = Export-Main 'pulse' 'docker-compose.mqtt-auth.yml'
 $docsBrain = Export-Main 'docs-brain'
 if ($ShortGrace) { $env:BILLING_GRACE = '00:00:20'; $env:BILLING_TICK = '00:00:05' }
 $env:GREENHAUS_DIR = $greenhaus.Replace('\', '/')
@@ -65,11 +70,13 @@ docker compose -p eco-greenhaus --project-directory $greenhaus --profile real `
     up -d --build api billing fulfilment keycloak
 if ($LASTEXITCODE) { throw 'Greenhaus did not start' }
 
-# Pulse: only what the check needs (API, Kafka-compatible broker, TimescaleDB). Its dashboard would claim port 8080.
+# Pulse: only what the check needs (API, Kafka-compatible broker, TimescaleDB, and EMQX for the devices, on host port 1884, which asks Pulse
+# who may connect: a device is its id and the credential from the packing bundle).
+# Its dashboard would claim port 8080.
 Write-Host '== Pulse'
 docker compose -p eco-pulse --project-directory $pulse `
-    -f "$pulse/docker-compose.yml" -f "$pulse/docker-compose.shared-realm.yml" -f "$pulse/docker-compose.events.yml" -f "$greenhaus/ecosystem/pulse.yml" `
-    up -d --build redpanda timescaledb api
+    -f "$pulse/docker-compose.yml" -f "$pulse/docker-compose.shared-realm.yml" -f "$pulse/docker-compose.events.yml" -f "$pulse/docker-compose.mqtt.yml" -f "$pulse/docker-compose.mqtt-auth.yml" -f "$greenhaus/ecosystem/pulse.yml" `
+    up -d --build redpanda timescaledb emqx api
 if ($LASTEXITCODE) { throw 'Pulse did not start' }
 
 # Docs-Brain: the assistant behind the Greenhaus API. Mock AI, so no model download; only its API and database. Its web UI would claim 8090.
@@ -78,6 +85,11 @@ docker compose -p eco-docsbrain --project-directory $docsBrain --env-file "$gree
     -f "$docsBrain/docker-compose.yml" `
     up -d --build postgres api
 if ($LASTEXITCODE) { throw 'Docs-Brain did not start' }
+
+# The kit emulator image, which e2e.ps1 runs as the controller of the allocated device.
+Write-Host '== Kit emulator'
+docker build -q -f "$greenhaus/tools/KitEmulator/Dockerfile" -t greenhaus-kit-emulator $greenhaus | Out-Null
+if ($LASTEXITCODE) { throw 'The kit emulator image did not build' }
 
 Write-Host '== Waiting'
 Wait-Url 'http://localhost:8181/realms/greenhaus/.well-known/openid-configuration' 'Keycloak (greenhaus realm)'

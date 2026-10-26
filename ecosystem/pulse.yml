@@ -1,4 +1,4 @@
-# Applied on top of Pulse's compose, shared-realm and events files: Pulse uses the one broker of the ecosystem
+# Applied on top of Pulse's compose, shared-realm, events and mqtt files: Pulse uses the one broker of the ecosystem
 # (Orderflow's, on host port 5672) instead of the broker its events file would start.
 services:
   rabbitmq:
