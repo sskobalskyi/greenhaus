@@ -172,7 +172,7 @@ docker compose --profile real up --build fulfilment   # http://localhost:8093/ap
 dotnet test tests/Greenhaus.Fulfilment.Tests          # real PostgreSQL and RabbitMQ, a fake Pulse, responses and events checked against the contracts
 ```
 
-The claim token and the device password of a device in the packing room are sealed (AES-GCM) in the database with Fulfilment__SecretsKey (base64 of 32 bytes, required outside development, a published development default in docker-compose.yml), see ADR 6.
+The claim token and the device password of a device in the packing room are sealed (AES-GCM) in the database with `Fulfilment__SecretsKey` (base64 of 32 bytes, required outside development, a published development default in `docker-compose.yml`), see ADR 6.
 
 ### The kit emulator
 
