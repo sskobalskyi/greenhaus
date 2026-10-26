@@ -42,7 +42,8 @@ public class PulseTests(GreenhausFixture api)
 
         var actuators = await Json(Call(user, "GET", "/pots/{potId}/actuators", new { potId = pot }), HttpStatusCode.OK);
         var pump = actuators.AsArray().Single(a => a!["id"]!.GetValue<string>() == "pump")!;
-        Assert.Equal("off", pump["mode"]!.GetValue<string>());
+        // A new actuator starts in notify-only until the person turns automatic control on.
+        Assert.Equal("notify", pump["mode"]!.GetValue<string>());
         // Settings start cautious and never beyond what the controller itself enforces.
         Assert.Equal(20, pump["limits"]!["maxRunSeconds"]!.GetValue<int>());
         Assert.Equal(60, pump["hardLimits"]!["maxRunSeconds"]!.GetValue<int>());
