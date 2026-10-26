@@ -31,6 +31,7 @@ tags:
   - name: Care
   - name: Claims
   - name: Assistant
+  - name: Notifications
 paths:
   /me:
     get:
@@ -626,6 +627,57 @@ paths:
               schema: { $ref: '#/components/schemas/CareTask' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /notifications:
+    get:
+      tags: [Notifications]
+      operationId: listNotifications
+      summary: The caller's notifications, newest first
+      description: |
+        What happened that the person should know: an alert, a controller going offline, a care task that is due, a plan change.
+        The server sends no user-facing text, only a `kind` and its `params`, and clients translate them.
+      parameters:
+        - name: unread
+          in: query
+          description: Only the notifications that have not been read
+          schema: { type: boolean }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 30 }
+      responses:
+        '200':
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Notification' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /notifications/{notificationId}/read:
+    parameters:
+      - name: notificationId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [Notifications]
+      operationId: markNotificationRead
+      summary: Mark one notification read
+      description: Idempotent. A notification of someone else answers `404`.
+      responses:
+        '200':
+          description: The notification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Notification' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /notifications/read-all:
+    post:
+      tags: [Notifications]
+      operationId: markAllNotificationsRead
+      summary: Mark every notification of the caller read
+      responses:
+        '204':
+          description: Done
   /pots/{potId}/assistant/ask:
     parameters:
       - $ref: '#/components/parameters/PotId'
@@ -1206,6 +1258,23 @@ components:
           description: With `done`. `answer` was written by the model, `retrieval_only` shows passages only, `no_results` found nothing.
         reason: { type: string, description: 'With `done`, when the answer is not a full one, for example `budget_exceeded`.' }
         tokens: { type: integer, minimum: 0, description: With `done` and `answer`. }
+    Notification:
+      type: object
+      required: [id, kind, params, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          enum: [alert_raised, alert_resolved, device_offline, device_online, actuator_blocked, care_task_due, plan_changed, plan_at_risk, automation_suggestion]
+          description: |
+            What happened. `params` carry the facts the text needs: `metric`, `direction`, `value`, `zone` for alerts, `deviceId`,
+            `actuatorId` and `reason` for a blocked actuator, `title` for a care task, `from`, `to` and `until` for plans.
+        potId: { type: string, format: uuid, description: 'The pot it is about, when there is one' }
+        params:
+          type: object
+          additionalProperties: { type: string }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: [string, 'null'], format: date-time }
     ClaimPreview:
       type: object
       required: [deviceId, model, claimable]

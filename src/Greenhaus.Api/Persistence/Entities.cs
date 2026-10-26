@@ -187,3 +187,18 @@ public class AssistantUsageEntity
     public DateOnly Month { get; set; }
     public int Count { get; set; }
 }
+
+/// <summary>Something that happened that a person should know. Only a kind and its facts are stored, clients write the text.</summary>
+public class NotificationEntity
+{
+    public Guid Id { get; set; }
+    public required string UserId { get; set; }
+    public required string Kind { get; set; }
+    public Guid? PotId { get; set; }
+    /// <summary>The facts for the text, a JSON object of strings.</summary>
+    public string ParamsJson { get; set; } = "{}";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
+    /// <summary>Names the thing a notification is about, so the same thing is told once. Null means no deduplication.</summary>
+    public string? DedupeKey { get; set; }
+}

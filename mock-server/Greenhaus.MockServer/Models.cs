@@ -318,6 +318,16 @@ public class Calibration
     public DateTimeOffset? CalibratedAt { get; set; }
 }
 
+public class Notification
+{
+    public Guid Id { get; set; }
+    public required string Kind { get; set; }
+    public Guid? PotId { get; set; }
+    public Dictionary<string, string> Params { get; set; } = [];
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ReadAt { get; set; }
+}
+
 public class AssistantQuestion
 {
     public string? Question { get; set; }

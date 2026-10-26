@@ -18,5 +18,6 @@ public static class GreenhausTelemetry
     public static readonly Counter<long> InboxDeadLettered = Meter.CreateCounter<long>("greenhaus.inbox.dead_lettered", description: "Events that could not be handled and went to the dead-letter queue");
     public static readonly Counter<long> LimitsReached = Meter.CreateCounter<long>("greenhaus.limits.reached", description: "Tier limits users ran into");
     public static readonly Counter<long> AssistantQuestions = Meter.CreateCounter<long>("greenhaus.assistant.questions", description: "Questions put to the assistant, by how they ended");
+    public static readonly Counter<long> Notifications = Meter.CreateCounter<long>("greenhaus.notifications.created", description: "Notifications created for people");
     public static readonly Counter<long> DevicesClaimed = Meter.CreateCounter<long>("greenhaus.devices.claimed", description: "Controllers claimed");
 }

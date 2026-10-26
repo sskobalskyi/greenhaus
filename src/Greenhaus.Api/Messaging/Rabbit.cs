@@ -19,7 +19,7 @@ public static class Rabbit
     public const string DeadLetterExchange = "integration.events.dlx";
 
     /// <summary>The events Greenhaus acts on.</summary>
-    public static readonly string[] Consumed = ["entitlement.changed.v1", "device.allocated.v1", "device.retired.v1", "command.completed.v1"];
+    public static readonly string[] Consumed = ["entitlement.changed.v1", "device.allocated.v1", "device.retired.v1", "command.completed.v1", "alert.raised.v1", "alert.resolved.v1", "device.status.v1"];
 
     public static Task<IConnection> ConnectAsync(RabbitOptions o, CancellationToken ct) =>
         new ConnectionFactory { HostName = o.Host!, Port = o.Port, UserName = o.User, Password = o.Password, VirtualHost = o.VirtualHost, AutomaticRecoveryEnabled = true }

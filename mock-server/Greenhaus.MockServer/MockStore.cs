@@ -68,6 +68,7 @@ public class MockStore
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
         Species = JsonSerializer.Deserialize<SpeciesFile>(File.ReadAllText(speciesPath), options)!.Species;
         Seed();
+        SeedNotifications();
     }
 
     /// <summary>Puts the mock back to its seeded state. Used by end-to-end tests, it is not part of the contract.</summary>
@@ -84,6 +85,7 @@ public class MockStore
             User.DisplayName = "Demo Gardener";
             User.Locale = "en";
             Seed();
+            SeedNotifications();
         }
     }
 
@@ -341,6 +343,19 @@ public class MockStore
         Id = id, Kind = kind, Metric = metric, Mode = mode, State = ActuatorState.Idle, Limits = limits, HardLimits = HardLimits(kind),
         LastRunAt = DateTimeOffset.UtcNow.AddHours(-5),
     };
+
+    /// <summary>What happened to the demo user, newest last in the list: one unread alert, one unread offline, one read plan change.</summary>
+    public List<Notification> Notifications { get; } = [];
+
+    private void SeedNotifications()
+    {
+        Notifications.Clear();
+        var herbs = Pots.Values.FirstOrDefault(p => p.Pot.Name == "Kitchen herbs");
+        var now = DateTimeOffset.UtcNow;
+        Notifications.Add(new Notification { Id = Guid.NewGuid(), Kind = "plan_changed", Params = new() { ["from"] = "gardener", ["to"] = "novice" }, CreatedAt = now.AddDays(-2), ReadAt = now.AddDays(-2).AddMinutes(5) });
+        Notifications.Add(new Notification { Id = Guid.NewGuid(), Kind = "device_offline", PotId = herbs?.Pot.Id, Params = new() { ["deviceId"] = "ghx-demo-0001" }, CreatedAt = now.AddHours(-3) });
+        Notifications.Add(new Notification { Id = Guid.NewGuid(), Kind = "alert_raised", PotId = herbs?.Pot.Id, Params = new() { ["metric"] = "soil_moisture", ["direction"] = "below", ["value"] = "31.5", ["zone"] = "the pot" }, CreatedAt = now.AddMinutes(-20) });
+    }
 
     private void Seed()
     {

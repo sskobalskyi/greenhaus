@@ -121,6 +121,10 @@ docker compose up -d mock                     # for the prices on the plans page
 npm run e2e:auth -w @greenhaus/web            # starts the web app itself and waits for the stack
 ```
 
+### Notifications
+
+What a person should know shows up in `GET /notifications` as a kind and its facts, which the app translates: an alert on a pot (from Pulse's `alert.raised.v1` and `alert.resolved.v1`, with the zone), a controller going offline or back, a care task that is due, a plan that was lowered or a grant that is at risk. Each thing is told once, and the list has an unread state. See [ADR 10](docs/adr/0010-notifications.md).
+
 ### The pot assistant
 
 `POST /pots/{potId}/assistant/ask` asks the Docs-Brain assistant about a pot and streams the answer. The tier decides the monthly quota (10, 100, 500; only answered questions count) and how much the assistant is told: the pot and its plants, plus the latest readings and alerts, plus the last days and the logs. It needs Docs-Brain (its `main`, with the mock provider offline) and a token source:

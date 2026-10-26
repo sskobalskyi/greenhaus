@@ -64,6 +64,13 @@ public sealed class GreenhausFixture : IAsyncLifetime
         return await action(scope.ServiceProvider.GetRequiredService<GreenhausDbContext>());
     }
 
+    /// <summary>Runs something with the services of the running API, in a scope of its own.</summary>
+    public async Task<T> WithServices<T>(Func<IServiceProvider, Task<T>> action)
+    {
+        using var scope = _factory!.Services.CreateScope();
+        return await action(scope.ServiceProvider);
+    }
+
     /// <summary>Puts a user on a tier the way billing's entitlement event would.</summary>
     public Task Grant(string user, Tier tier) => WithDb(async db =>
     {
