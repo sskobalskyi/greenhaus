@@ -20,7 +20,11 @@ public sealed class BillingProcessor(BillingDbContext db, IOptions<BillingOption
         var now = clock.GetUtcNow();
         var o = options.Value;
 
-        var dueSubscriptions = db.Subscriptions.Where(s => s.Status != "cancelled" && s.CurrentPeriodEnd <= now);
+        // A paying subscription is due at the end of its period. One that is past due is due for its next retry, or when its
+        // dunning period is over. A past-due row from before dunning existed has no clock yet and gets one.
+        var dunningCutoff = now - o.DunningPeriod;
+        var dueSubscriptions = db.Subscriptions.Where(s => (s.Status == "active" && s.CurrentPeriodEnd <= now)
+            || (s.Status == "past_due" && (s.PastDueSince == null || s.NextRetryAt <= now || s.PastDueSince <= dunningCutoff || (s.CancelAtPeriodEnd && s.CurrentPeriodEnd <= now))));
         var dueGrants = db.Grants.Where(g => (g.Status == "at_risk" && g.GraceEndsAt <= now) || (g.Status == "active" && g.ValidUntil <= now));
         if (userId is not null)
         {
@@ -37,7 +41,8 @@ public sealed class BillingProcessor(BillingDbContext db, IOptions<BillingOption
 
         foreach (var sub in subscriptions)
         {
-            while (sub.Status != "cancelled" && sub.CurrentPeriodEnd <= now)
+            // Renewal catches up period by period, so a long absence produces one invoice per period.
+            while (sub.Status == "active" && sub.CurrentPeriodEnd <= now)
             {
                 if (sub.CancelAtPeriodEnd)
                 {
@@ -47,20 +52,66 @@ public sealed class BillingProcessor(BillingDbContext db, IOptions<BillingOption
                     break;
                 }
 
-                var declined = sub.PaymentToken.EndsWith("-renewal-fails", StringComparison.Ordinal);
-                db.Invoices.Add(NewInvoice(sub.UserId, sub.CurrentPeriodEnd, sub.Tier, declined ? "failed" : "paid"));
-                sub.Status = declined ? "past_due" : "active";
+                var failedAt = sub.CurrentPeriodEnd;
+                var declined = RenewalFails(sub.PaymentToken, retry: false);
+                db.Invoices.Add(NewInvoice(sub.UserId, failedAt, sub.Tier, declined ? "failed" : "paid"));
                 sub.CurrentPeriodEnd += o.Period;
-                if (declined)
+                if (!declined)
                 {
-                    events.SubscriptionChanged(sub.UserId, sub.Tier, "past_due");
-                    changes.Add(new Change(sub.UserId, "payment_failed"));
+                    changes.Add(new Change(sub.UserId, "subscribed"));
+                    continue;
+                }
+
+                // Access goes on while billing tries the payment method again. The dunning clock starts at the failed payment.
+                sub.Status = "past_due";
+                sub.PastDueSince = failedAt;
+                sub.NextRetryAt = failedAt + o.RetryInterval;
+                sub.RetryCount = 0;
+                events.SubscriptionChanged(sub.UserId, sub.Tier, "past_due");
+                changes.Add(new Change(sub.UserId, "payment_failed"));
+            }
+
+            // Retries, in the order they fell due, until one works or the dunning period is over.
+            if (sub.Status == "past_due" && sub.PastDueSince is null)
+            {
+                sub.PastDueSince = now;
+                sub.NextRetryAt = now + o.RetryInterval;
+            }
+            while (sub.Status == "past_due")
+            {
+                if (sub.CancelAtPeriodEnd && sub.CurrentPeriodEnd <= now)
+                {
+                    Cancel(sub, changes);
                     break;
                 }
-                changes.Add(new Change(sub.UserId, "subscribed"));
+
+                var cutoff = sub.PastDueSince!.Value + o.DunningPeriod;
+                var retryAt = sub.NextRetryAt ?? now;
+                if (retryAt <= now && retryAt < cutoff)
+                {
+                    if (RenewalFails(sub.PaymentToken, retry: true))
+                    {
+                        db.Invoices.Add(NewInvoice(sub.UserId, retryAt, sub.Tier, "failed"));
+                        sub.RetryCount++;
+                        sub.NextRetryAt = retryAt + o.RetryInterval;
+                        continue;
+                    }
+
+                    // The period was already extended when the payment first failed, so this pays for it.
+                    db.Invoices.Add(NewInvoice(sub.UserId, retryAt, sub.Tier, "paid"));
+                    sub.Status = "active";
+                    sub.PastDueSince = null;
+                    sub.NextRetryAt = null;
+                    sub.RetryCount = 0;
+                    events.SubscriptionChanged(sub.UserId, sub.Tier, "active");
+                    changes.Add(new Change(sub.UserId, "subscribed"));
+                    break;
+                }
+
+                if (cutoff <= now) Cancel(sub, changes);
+                break;
             }
         }
-
         foreach (var grant in grants)
         {
             var reason = grant.Status == "at_risk" ? "grant_revoked" : "grant_expired";
@@ -77,6 +128,22 @@ public sealed class BillingProcessor(BillingDbContext db, IOptions<BillingOption
         await tx.CommitAsync(ct);
         return changes;
     }
+    private void Cancel(SubscriptionEntity sub, List<Change> changes)
+    {
+        sub.Status = "cancelled";
+        sub.PastDueSince = null;
+        sub.NextRetryAt = null;
+        events.SubscriptionChanged(sub.UserId, sub.Tier, "cancelled");
+        changes.Add(new Change(sub.UserId, "cancelled"));
+    }
+
+    /// <summary>
+    /// The demo provider's rule. A token ending in -renewal-fails is refused every time, one ending in -renewal-recovers is refused at the
+    /// first renewal and accepted when billing tries again, and any other is accepted.
+    /// </summary>
+    public static bool RenewalFails(string token, bool retry) =>
+        token.EndsWith("-renewal-fails", StringComparison.Ordinal) || (!retry && token.EndsWith("-renewal-recovers", StringComparison.Ordinal));
+
     public static InvoiceEntity NewInvoice(string userId, DateTimeOffset at, Tier tier, string status) =>
         new() { Id = Guid.NewGuid(), UserId = userId, IssuedAt = at, Amount = BillingRules.PricePerMonth(tier), Currency = "USD", Status = status };
 }

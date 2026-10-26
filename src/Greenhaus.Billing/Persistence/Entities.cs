@@ -15,6 +15,12 @@ public class SubscriptionEntity
     /// <summary>The demo provider's token. One ending in "-renewal-fails" makes the next renewal fail.</summary>
     public required string PaymentToken { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    /// <summary>When the payment first failed, while past due. The dunning period counts from here. Null otherwise.</summary>
+    public DateTimeOffset? PastDueSince { get; set; }
+    /// <summary>When billing tries the payment method next, while past due.</summary>
+    public DateTimeOffset? NextRetryAt { get; set; }
+    /// <summary>How many retries failed since the subscription became past due.</summary>
+    public int RetryCount { get; set; }
 }
 
 public class InvoiceEntity

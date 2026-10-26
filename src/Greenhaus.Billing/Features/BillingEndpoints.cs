@@ -47,7 +47,8 @@ public static class BillingEndpoints
             }
 
             var existing = await db.Subscriptions.FirstOrDefaultAsync(s => s.UserId == user, ct);
-            if (existing is { Status: "active" or "past_due", CancelAtPeriodEnd: false } && existing.Tier == tier)
+            // A past-due subscription may be subscribed again on the same plan: that is how a person replaces the payment method that failed.
+            if (existing is { Status: "active", CancelAtPeriodEnd: false } && existing.Tier == tier)
                 return Problems.Fail(400, "already_subscribed", "Already on this plan");
 
             if (existing is null) db.Subscriptions.Add(existing = new SubscriptionEntity { UserId = user, PaymentToken = body.PaymentMethodToken, Status = "active" });
@@ -55,6 +56,9 @@ public static class BillingEndpoints
             existing.Tier = tier;
             existing.Status = "active";
             existing.CancelAtPeriodEnd = false;
+            existing.PastDueSince = null;
+            existing.NextRetryAt = null;
+            existing.RetryCount = 0;
             existing.PaymentToken = body.PaymentMethodToken;
             existing.CreatedAt = now;
             existing.CurrentPeriodEnd = now + options.Value.Period;
