@@ -20,4 +20,15 @@ Billing owns paid subscriptions and, later, grants earned by purchases, so that 
 ## Consequences
 - The web app can use the real billing by pointing `VITE_BILLING_BASE` at `http://localhost:8092/api/billing/v1`.
 - Subscribing replaces the single subscription row of a user, so history lives in the invoices.
-- Renewal catches up periods one by one, so a long absence produces one invoice per period. A subscription that stays `past_due` is not cancelled automatically: dunning is out of scope.
+- Renewal catches up periods one by one, so a long absence produces one invoice per period.
+
+## Dunning
+A payment that fails does not leave a subscription `past_due` for ever.
+- When a renewal fails the subscription becomes `past_due` (`subscription.changed.v1` with that status), the period is still extended so access goes on, and a dunning clock starts at the failed payment (`PastDueSince`).
+- While `past_due`, billing tries the stored payment method again every `Billing:RetryInterval` (default one day). Each failed attempt is a failed invoice, so the history shows every attempt. The first retry that works records a paid invoice, returns the subscription to `active` and announces it, with no cancel and no change of tier.
+- When `Billing:DunningPeriod` (default seven days) has passed without a payment the background job cancels the subscription: `subscription.changed.v1` with status `cancelled`, and the effective tier is computed again from what is left. With no purchase grant the tier falls to Novice and `entitlement.changed.v1` has reason `cancelled`; with a grant the tier is the grant's and the reason is `grant_started`, because the Greenhaus API labels the source of a tier from the reason. Nothing is deleted, and the person can subscribe again, which starts a fresh subscription without the old dunning clock.
+- A person can mend a `past_due` subscription before it ends by subscribing to the same plan again with another payment method token: that replaces the payment method, pays at once and clears the dunning clock. (An `active` subscription on the same plan is still refused with `already_subscribed`.)
+- The job and the API run the same code, so a request sees the state of the clock, and running the job twice does nothing the second time. A `past_due` row from before dunning existed gets its clock on the first run.
+- The demo provider's tokens: `...-renewal-fails` is refused at every renewal and every retry, `...-renewal-recovers` is refused at the first renewal and accepted when billing retries, anything else is accepted.
+- Cancelling twice is harmless, and a subscription cancelled while `past_due` ends at its period end like any other.
+- Not done: a notice to the person before the cancel (the Greenhaus API already notifies a lowered plan from `entitlement.changed.v1`), and a different retry schedule than a fixed interval.
