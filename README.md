@@ -172,6 +172,10 @@ docker compose --profile real up --build fulfilment   # http://localhost:8093/ap
 dotnet test tests/Greenhaus.Fulfilment.Tests          # real PostgreSQL and RabbitMQ, a fake Pulse, responses and events checked against the contracts
 ```
 
+### The kit emulator
+
+`tools/KitEmulator` emulates pot controllers over MQTT with a small plant model (soil dries, the pump wets it, the heater, lamp and fan act), the hard limits enforced by the controller itself, and the acks the platform expects, so the automation loop can be shown closed without hardware. See [tools/KitEmulator/README.md](tools/KitEmulator/README.md) and [ADR 12](docs/adr/0012-kit-emulator.md).
+
 ### The whole ecosystem
 
 `./ecosystem/up.ps1` starts Orderflow, Pulse and the Greenhaus services together on one broker and one Keycloak realm, and `./ecosystem/e2e.ps1` runs the whole story for a new person, from buying a kit to a reading in the pot. See [ecosystem/README.md](ecosystem/README.md) and [ADR 8](docs/adr/0008-ecosystem-orchestration.md).
