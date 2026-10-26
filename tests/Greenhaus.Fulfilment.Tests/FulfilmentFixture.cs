@@ -181,6 +181,16 @@ public sealed class FulfilmentFixture : IAsyncLifetime
 
     public async Task<IChannel> OpenChannel() => await _connection.CreateChannelAsync();
 
+    /// <summary>The box the running service seals with, so tests can read what the database holds.</summary>
+    public SecretBox Secrets => _factory!.Services.GetRequiredService<SecretBox>();
+
+    public string Token(AllocationEntity a) => Open(a.ClaimToken, SecretBox.ClaimTokenField, a);
+
+    public string Credential(AllocationEntity a) => Open(a.Credential, SecretBox.CredentialField, a);
+
+    private string Open(string? stored, string field, AllocationEntity a) =>
+        Secrets.TryOpen(stored, field, a.Id, a.DeviceId, out var plaintext) && plaintext is not null ? plaintext : throw new Xunit.Sdk.XunitException($"The stored {field} of {a.DeviceId} does not open");
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

@@ -65,6 +65,9 @@ public partial class Program
         builder.Services.TryAddSingleton(TimeProvider.System);
         builder.Services.AddSingleton(_ => KitCatalog.Load(configuration["Fulfilment:KitsPath"] ?? "data/kit-capabilities.json"));
         builder.Services.AddScoped<EventPublisher>();
+        // Packing secrets are sealed before they reach the database. Outside development the service does not start without a key.
+        var secretBox = SecretBox.Create(configuration["Fulfilment:SecretsKey"], string.Equals(auth.Mode, "Development", StringComparison.OrdinalIgnoreCase));
+        builder.Services.AddSingleton(secretBox);
 
         builder.Services.AddSingleton<PulseTokens>();
         builder.Services.AddTransient<PulseTokenHandler>();
@@ -103,8 +106,13 @@ public partial class Program
         if (configuration.GetValue("Database:MigrateOnStartup", true))
         {
             using var scope = app.Services.CreateScope();
-            scope.ServiceProvider.GetRequiredService<FulfilmentDbContext>().Database.Migrate();
+            var db = scope.ServiceProvider.GetRequiredService<FulfilmentDbContext>();
+            db.Database.Migrate();
+            var sealedLegacy = SecretBox.SealLegacyAsync(db, secretBox).GetAwaiter().GetResult();
+            if (sealedLegacy > 0) app.Logger.LogWarning("Sealed the packing secrets of {Count} allocation(s) that an earlier version stored in the clear", sealedLegacy);
         }
+        if (secretBox.Ephemeral)
+            app.Logger.LogWarning("Fulfilment:SecretsKey is not set. A key was made up for this run, so packing secrets sealed now cannot be read after a restart. Set the key.");
 
         if (string.Equals(auth.Mode, "Development", StringComparison.OrdinalIgnoreCase))
             app.Logger.LogWarning("Auth:Mode is Development. Callers are trusted by the X-User-Id header and are fulfilment admins unless X-Roles says otherwise. Never use this outside a local machine.");

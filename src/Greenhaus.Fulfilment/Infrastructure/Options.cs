@@ -13,6 +13,8 @@ public sealed class FulfilmentOptions
     public TimeSpan MaxBackoff { get; set; } = TimeSpan.FromMinutes(5);
     /// <summary>After this many failed calls a device is shown as pulse_failed and waits for someone to retry it.</summary>
     public int MaxAttempts { get; set; } = 8;
+    /// <summary>Base64 of the 32-byte key that seals the claim tokens and device passwords in the database. Required outside development.</summary>
+    public string? SecretsKey { get; set; }
 }
 
 public sealed class WebOptions
