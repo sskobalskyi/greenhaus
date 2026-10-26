@@ -302,7 +302,8 @@ paths:
         `400` when the device has no such actuator, a run is longer than the actuator's `maxRunSeconds`, a required
         field is missing (`validation_failed`), or `expiresAt` is not in the future (`command_expired`). `409` with
         the code `invalid_state` for a retired device. A command for a device that is currently offline is still
-        queued: it is delivered when the device is back, or ends `expired`.      requestBody:
+        queued: it is delivered when the device is back, or ends `expired`.
+      requestBody:
         required: true
         content:
           application/json:
