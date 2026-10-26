@@ -138,6 +138,19 @@ jobs:
       - name: Build the container image
         run: docker build -f src/Greenhaus.Fulfilment/Dockerfile -t greenhaus-fulfilment .
 
+  kit-emulator:
+    name: Kit emulator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 9.0.x
+      - name: Physics, controller and the emulator against a real broker, checked against the device contract
+        run: dotnet test tests/Greenhaus.KitEmulator.Tests --configuration Release
+      - name: Build the container image
+        run: docker build -f tools/KitEmulator/Dockerfile -t greenhaus-kit-emulator .
+
   ui:
     name: Design system and Storybook
     runs-on: ubuntu-latest
