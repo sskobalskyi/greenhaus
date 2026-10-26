@@ -12,6 +12,8 @@ Orderflow (the shop), Pulse (devices) and the Greenhaus services run together on
 
 The story also has a sad branch: `./ecosystem/e2e.ps1 -Return` returns the goods and checks the purchase grant goes to at risk with a deadline while the person keeps the tier. With `./ecosystem/up.ps1 -ShortGrace` (grace of 20 seconds instead of 7 days) `./ecosystem/e2e.ps1 -WaitForRevocation` also waits for the revocation, checks the tier falls back to Novice and that the pot and its device are kept.
 
+To leave a demo account behind to look around in, run the story for a chosen person and keep the emulated controller running: `./ecosystem/e2e.ps1 -Username tester -Password 'Tester123!' -KeepRunning` (then start the web app with the settings in the root README, or open the shop on `localhost:5173`). The realm already has `demo`, `alice` and `bob` (password = name) and `admin` / `admin`; use another name than those.
+
 Needs Docker and PowerShell. `up.ps1 -Refresh` exports the projects again from the latest `origin/main`.
 
 ## How it fits together
