@@ -11,6 +11,7 @@ The projects are separate repositories with their own compose files, ports and K
 - Orderflow and Pulse are built from a clean export of `origin/main` (`git archive`), because other sessions work in their working trees. `-Refresh` re-exports.
 - The shop sells the kits through Orderflow's own seed files (`data/shop-catalog.json`, `ecosystem/stock.json`), so Orderflow stays generic.
 - The end-to-end script creates a new person in Keycloak each run, so runs do not depend on each other, and talks to every service with a real token of that realm. It asserts the hand-offs between projects, not their internals.
+- Devices: EMQX of Pulse (with its bridge and per-device credentials) runs in the stack and the kit emulator (ADR 12) is the controller of the allocated device. The script starts it before the order ships, because the broker password exists only until then, and checks that a wrong password is refused.
 - It is a manual check, not a CI job: it needs three repositories and many containers.
 
 ## Consequences

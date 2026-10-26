@@ -23,4 +23,4 @@ dotnet run --project tools/KitEmulator -- --broker localhost:1884 --provision-fr
 
 `dotnet test tests/Greenhaus.KitEmulator.Tests`: the physics and the controller on a fake clock (limits, expiry, repeats, kill switch, cutoff, empty tank, fruitless runs, state on change), and the emulator against a real EMQX in a container, every message checked against the AsyncAPI document.
 
-Not done: per-device broker credentials work from the emulator's side (`--credential`), but until Pulse verifies them the local broker is anonymous.
+It connects with `--credential <id>=<password>` or the credential of the packing bundle (`--provision-from`). The broker of the ecosystem asks Pulse who may connect: the emulator subscribes only to its own `commands` topic (no wildcards) and publishes only under its own device id, which is all such a broker allows.
