@@ -139,6 +139,27 @@ public class MessagingTests(GreenhausFixture api) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task An_event_without_a_trace_has_no_traceparent_header_and_its_headers_still_match_the_contract()
+    {
+        var user = GreenhausFixture.NewUser();
+        var payload = JsonSerializer.Serialize(new { userId = user, limitType = "pots", tier = "novice", at = DateTimeOffset.UtcNow });
+        api.Events.VerifyPayload("limit.reached.v1", payload);
+        // Written the way the service writes an event outside a request: nothing says where it came from.
+        await api.WithDb(async db =>
+        {
+            db.Outbox.Add(new Greenhaus.Api.Persistence.OutboxMessageEntity { Id = Guid.NewGuid(), Type = "limit.reached.v1", Payload = payload, CreatedAt = DateTimeOffset.UtcNow, Traceparent = null });
+            await db.SaveChangesAsync();
+            return 0;
+        });
+
+        var (key, body, headers) = await Listen("limit.reached.v1", user);
+        Assert.False(headers.ContainsKey("traceparent"), "a null traceparent must not be sent as a header");
+        Assert.All(new[] { "messageId", "occurredAt", "schemaVersion" }, name => Assert.False(string.IsNullOrEmpty(headers.GetValueOrDefault(name)), $"{name} is a contract header"));
+        api.Events.VerifyHeaders(key, headers);
+        api.Events.VerifyPayload(key, body);
+    }
+
+    [Fact]
     public async Task An_entitlement_event_changes_the_tier_once_and_ignores_duplicates_and_stale_news()
     {
         var user = GreenhausFixture.NewUser();
