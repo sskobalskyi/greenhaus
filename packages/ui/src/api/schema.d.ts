@@ -1003,6 +1003,8 @@ export interface components {
                 documentId?: string;
                 title: string;
                 text: string;
+                /** @description True for a text of the shared care corpus, which every user's assistant can cite. Absent for a document of the user's own. */
+                shared?: boolean;
             }[];
             /** @description With `token`. A piece of the answer. */
             text?: string;

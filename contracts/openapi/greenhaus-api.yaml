@@ -1251,6 +1251,7 @@ components:
               documentId: { type: string, format: uuid }
               title: { type: string }
               text: { type: string }
+              shared: { type: boolean, description: "True for a text of the shared care corpus, which every user's assistant can cite. Absent for a document of the user's own." }
         text: { type: string, description: With `token`. A piece of the answer. }
         mode:
           type: string
