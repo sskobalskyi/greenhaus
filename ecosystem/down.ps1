@@ -13,6 +13,6 @@ docker ps -aq --filter "name=eco-kit-" | ForEach-Object { docker rm -f $_ | Out-
 
 foreach ($name in 'orderflow', 'pulse', 'docs-brain') {
     $dir = Join-Path $work $name
-    if (Test-Path $dir) { docker compose -p "eco-$($name.Replace('-', ''))" --project-directory $dir -f "$dir/docker-compose.yml" down $flag }
+    if (Test-Path $dir) { docker compose -p "eco-$($name.Replace('-', ''))" --project-directory $dir -f "$dir/docker-compose.yml" down --remove-orphans $flag }
 }
 docker compose -p eco-greenhaus --project-directory $greenhaus --profile real -f "$greenhaus/docker-compose.yml" -f "$greenhaus/docker-compose.auth.yml" down $flag
