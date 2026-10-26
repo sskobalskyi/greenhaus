@@ -120,6 +120,14 @@ namespace Greenhaus.Api.Persistence.Migrations
                     b.Property<int>("Count")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Reserved")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTimeOffset?>("ReservedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("UserId", "Month");
 
                     b.ToTable("assistant_usage", "greenhaus");

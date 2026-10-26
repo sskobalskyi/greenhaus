@@ -42,14 +42,30 @@ public static class AssistantEndpoints
 
         var tier = await entitlements.TierOfAsync(user, ct);
         var limits = TierPolicy.LimitsFor(tier);
-        var used = await AssistantUsage.CountAsync(db, user, clock.GetUtcNow(), ct);
-        if (used >= limits.AiQuestionsPerMonth)
+        // A place in the quota is taken before anything is sent, so questions that start together cannot all pass a check that none of them has counted in yet.
+        var reservation = await AssistantUsage.TryReserveAsync(db, user, clock.GetUtcNow(), limits.AiQuestionsPerMonth, ct);
+        if (reservation is null)
         {
             await events.LimitReachedAsync(user, "ai_questions", tier, ct);
             await Problems.Fail(403, "limit_reached", "Question limit reached", $"The {tier} tier allows {limits.AiQuestionsPerMonth} questions a month", "ai_questions", TierPolicy.Next(tier)).ExecuteAsync(http);
             return;
         }
 
+        // The place is held for as long as the question runs. It becomes a counted question when the assistant really answered, and is
+        // given back in every other case, including a person who went away, so the finally block does not listen to cancellation.
+        var answered = false;
+        try { answered = await Stream(pot, user, question, limits, http, contexts, assistant, log, ct); }
+        finally
+        {
+            if (answered) await AssistantUsage.ConfirmAsync(db, reservation, CancellationToken.None);
+            else await AssistantUsage.ReleaseAsync(db, reservation, CancellationToken.None);
+        }
+    }
+
+    /// <summary>Streams the answer through. True when it ended with a `done` of mode `answer`.</summary>
+    private static async Task<bool> Stream(PotEntity pot, string user, string question, TierLimits limits, HttpContext http, AssistantContextService contexts,
+        IAssistantClient assistant, ILogger log, CancellationToken ct)
+    {
         var context = await contexts.BuildAsync(pot, limits, ct);
         await using var stream = assistant.AskAsync(user, question, context, ct).GetAsyncEnumerator(ct);
 
@@ -61,7 +77,7 @@ public static class AssistantEndpoints
         {
             GreenhausTelemetry.AssistantQuestions.Add(1, new KeyValuePair<string, object?>("mode", "unavailable"));
             await Problems.Fail(503, "assistant_unavailable", "The assistant is not available right now").ExecuteAsync(http);
-            return;
+            return false;
         }
 
         http.Response.ContentType = "text/event-stream";
@@ -95,11 +111,11 @@ public static class AssistantEndpoints
             // The stream broke off, or ended without a done: finish it properly and do not count it.
             await Send(JsonSerializer.Serialize(new { type = "done", mode = "retrieval_only", reason = "assistant_unavailable" }, Json));
             GreenhausTelemetry.AssistantQuestions.Add(1, new KeyValuePair<string, object?>("mode", "unavailable"));
-            return;
+            return false;
         }
 
         GreenhausTelemetry.AssistantQuestions.Add(1, new KeyValuePair<string, object?>("mode", mode));
-        if (mode == "answer") await AssistantUsage.AddAsync(db, user, clock.GetUtcNow(), CancellationToken.None);
+        return mode == "answer";
     }
 
     /// <summary>The mode of a `done` event, or null for any other event.</summary>
