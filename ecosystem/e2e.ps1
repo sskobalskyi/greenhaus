@@ -146,6 +146,25 @@ $status2 = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $app
 Check 'the pot status says attention and names the worst zone' ([bool]$status2 -and [bool]$status2.worstZoneId)
 
 # ---------------------------------------------------------------------------------------------------------------------
+Step 'The pot waters itself: the pump is on auto and the soil is too dry'
+$null = Call 'PUT' "$greenhaus/pots/$($pot.id)/channels/$($soil.id)/calibration" $appToken @{ dryRaw = 800; wetRaw = 300 }
+$pump = Call 'PUT' "$greenhaus/pots/$($pot.id)/actuators/pump/mode" $appToken @{ mode = 'auto' }
+Check 'the pump is on auto (the Gardener tier allows it)' ($pump.mode -eq 'auto')
+$auto = Wait-Until { $l = @(Call 'GET' "$greenhaus/pots/$($pot.id)/audit-log" $appToken | Where-Object { $_.actor -eq 'automation' -and $_.action -eq 'run' -and $_.actuatorId -eq 'pump' }); if ($l.Count) { $l[0] } } 'the control loop to water' 90
+Check 'the control loop decided to water and wrote why in the audit log' ([bool]$auto) "(entry: $($auto | ConvertTo-Json -Compress))"
+$sent = Wait-Until { $c = @(Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/commands" $service | Where-Object { $_.type -eq 'run_actuator' -and $_.actuatorId -eq 'pump' }); if ($c.Count) { $c } } 'the automatic command in Pulse'
+Check 'Pulse holds the command the loop sent' ([bool]$sent)
+
+# ---------------------------------------------------------------------------------------------------------------------
+Step 'The person waters by hand: the command reaches the device through Pulse'
+$receipt = Call 'POST' "$greenhaus/pots/$($pot.id)/actuators/pump/run" $appToken @{ durationSeconds = 10 }
+Check 'Greenhaus accepted the run and gave a command id' ([bool]$receipt.commandId)
+$queued = Wait-Until { $c = @(Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/commands" $service | Where-Object { $_.commandId -eq $receipt.commandId }); if ($c.Count) { $c[0] } } 'the command in Pulse'
+Check 'Pulse holds the command for the device (queued or beyond)' ([bool]$queued -and $queued.type -eq 'run_actuator' -and $queued.actuatorId -eq 'pump') "(command: $($queued | ConvertTo-Json -Compress))"
+$log = Call 'GET' "$greenhaus/pots/$($pot.id)/audit-log" $appToken
+Check 'the audit log says who asked, the person, and which command' (@($log | Where-Object { $_.action -eq 'run' -and $_.actor -eq 'user' }).Count -ge 1)
+
+# ---------------------------------------------------------------------------------------------------------------------
 Step 'The person asks the assistant about the pot'
 $null = Call 'POST' "$greenhaus/pots/$($pot.id)/plants" $appToken @{ speciesId = 'basil'; nickname = 'Basil on the sill' }
 $before = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth

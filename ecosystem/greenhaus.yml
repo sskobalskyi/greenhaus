@@ -8,6 +8,8 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       RabbitMq__Host: host.docker.internal
+      # The control loop looks every few seconds instead of every 30, so the check does not wait long.
+      Automation__Interval: "00:00:05"
     depends_on: !override
       postgres:
         condition: service_healthy
