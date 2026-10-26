@@ -132,6 +132,20 @@ $status = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appT
 Check 'the pot status shows the reading from the device' ([bool]$status)
 
 # ---------------------------------------------------------------------------------------------------------------------
+Step 'The pot has a target and the device breaks it: Pulse raises an alert and the person is notified'
+$requirements = Call 'GET' "$greenhaus/pots/$($pot.id)/requirements" $appToken
+foreach ($m in $requirements.metrics) { if ($m.metric -eq 'soil_moisture') { $m.enabled = $true; $m | Add-Member -Force -NotePropertyName min -NotePropertyValue 40; $m | Add-Member -Force -NotePropertyName max -NotePropertyValue 70 } }
+$null = Call 'PUT' "$greenhaus/pots/$($pot.id)/requirements" $appToken $requirements
+$rules = Wait-Until { $r = @(Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/rules" $service); if (@($r | Where-Object { $_.kind -eq 'threshold' -and $_.channelId -eq $soil.id }).Count) { $r } } 'the threshold rule to reach Pulse'
+Check 'the target became an alert rule in Pulse' ([bool]$rules)
+$dry = @{ deviceId = $deviceId; metric = 'soil_moisture'; channel = $soil.id; value = 22.0; timestamp = (Get-Date).ToUniversalTime().ToString('o') }
+$null = Invoke-WebRequest -Method Post -Uri "$pulse/api/telemetry" -Headers @{ Authorization = "Bearer $service" } -ContentType 'application/json' -Body ('[' + ($dry | ConvertTo-Json -Compress) + ']') -UseBasicParsing
+$alert = Wait-Until { $n = Call 'GET' "$greenhaus/notifications?unread=true" $appToken; $hit = @($n | Where-Object { $_.kind -eq 'alert_raised' }); if ($hit.Count) { $hit[0] } } 'the alert notification'
+Check 'the person has an unread alert notification for this pot' ([bool]$alert -and $alert.potId -eq $pot.id) "(notification: $($alert | ConvertTo-Json -Compress))"
+$status2 = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appToken; if ($s.state -eq 'attention') { $s } } 'the pot to show attention'
+Check 'the pot status says attention and names the worst zone' ([bool]$status2 -and [bool]$status2.worstZoneId)
+
+# ---------------------------------------------------------------------------------------------------------------------
 Step 'The person asks the assistant about the pot'
 $null = Call 'POST' "$greenhaus/pots/$($pot.id)/plants" $appToken @{ speciesId = 'basil'; nickname = 'Basil on the sill' }
 $before = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth
@@ -143,8 +157,8 @@ $events = @($stream.Content -split "`n`n" | Where-Object { $_.Trim().StartsWith(
 $done = @($events | Where-Object { $_.type -eq 'done' })[0]
 $answer = (@($events | Where-Object { $_.type -eq 'token' } | ForEach-Object { $_.text }) -join '')
 Check 'the assistant answered' ($done.mode -eq 'answer') "(mode $($done.mode), reason $($done.reason))"
-# The mock AI of Docs-Brain builds its answer from what Greenhaus told it about the pot, so the reading must show up in it.
-Check 'the answer is grounded in the pot''s reading (31.5)' ($answer -match '31\.5') "(answer: $answer)"
+# The mock AI of Docs-Brain builds its answer from what Greenhaus told it about the pot, so the latest reading and its state must show up in it.
+Check 'the answer is grounded in the pot''s latest reading (22, below the target)' ($answer -match '22' -and $answer -match 'below') "(answer: $answer)"
 $after = Wait-Until { $u = (Call 'GET' "$greenhaus/me/entitlements" $appToken).usage.aiQuestionsThisMonth; if ($u -eq ($before + 1)) { $u } } 'the question to be counted'
 Check 'the question counts against the monthly quota' ($null -ne $after)
 
