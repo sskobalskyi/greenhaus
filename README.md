@@ -137,6 +137,10 @@ $env:DOCSBRAIN_CLIENT_ID = "greenhaus-assistant"; $env:DOCSBRAIN_CLIENT_SECRET =
 
 Without them the endpoint answers `503 assistant_unavailable`. See [ADR 9](docs/adr/0009-pot-assistant.md).
 
+### The automation loop
+
+The API decides when an actuator runs ([ADR 11](docs/adr/0011-automation-loop.md)): the pump waters a dry pot, the lamp lights a dark one, the heater and the fan hold the temperature, always within the safety limits (a bounded run, a minimum interval, a daily cap, a stop after runs that change nothing, a kill switch). `Automation:Interval` sets how often it looks (30 s), `Automation:Enabled=false` turns it off. In notify-only mode it suggests instead, and when the plan drops, automation beyond the new plan falls back to notify-only. It needs Pulse commands to act; until then it logs that they are not supported.
+
 ### Against a live Pulse
 
 Checked against Pulse `main` (device registry, JWT, channels) with its Keycloak: Greenhaus asks for a client-credentials token of `pulse-service` and claims a shipped device, reads its state and latest readings, and stores calibration. Rules and commands are in the Pulse contract but not in Pulse yet, so syncing alert rules and sending run or kill-switch commands answers `pulse_not_supported`: the pot's own data stays correct, a run is refused with 503 and the rules follow when Pulse offers them.
