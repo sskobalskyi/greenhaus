@@ -9,7 +9,12 @@ param(
     # Also return the goods: the purchase grant goes to at risk, with a deadline.
     [switch]$Return,
     # With -Return, also wait for the grace period to end and the tier to fall back (needs up.ps1 -ShortGrace).
-    [switch]$WaitForRevocation
+    [switch]$WaitForRevocation,
+    # Use this person instead of a new random one (it is created if it does not exist), for example to leave a demo account behind.
+    [string]$Username,
+    [string]$Password = 'Passw0rd!x',
+    # Leave the emulated controller running when the story is over, so the pot keeps getting readings.
+    [switch]$KeepRunning
 )
 
 $ErrorActionPreference = 'Stop'
@@ -71,13 +76,16 @@ function Read-Subject([string]$jwt) {
 Step 'A new person registers in the shared realm'
 $master = (Invoke-RestMethod -Method Post -Uri "$keycloak/realms/master/protocol/openid-connect/token" -ContentType 'application/x-www-form-urlencoded' `
     -Body @{ grant_type = 'password'; client_id = 'admin-cli'; username = 'admin'; password = 'admin' }).access_token
-$name = 'buyer' + (Get-Date -Format 'MMddHHmmss')
-$created = Invoke-WebRequest -Method Post -Uri "$keycloak/admin/realms/greenhaus/users" -Headers @{ Authorization = "Bearer $master" } -ContentType 'application/json' -UseBasicParsing `
-    -Body (@{ username = $name; email = "$name@example.com"; firstName = 'Bea'; lastName = 'Buyer'; enabled = $true; emailVerified = $true
-              credentials = @(@{ type = 'password'; value = 'Passw0rd!x'; temporary = $false }) } | ConvertTo-Json -Depth 5)
-Check 'the person exists in the realm' ($created.StatusCode -eq 201)
-$shopToken = Get-Token 'orderflow-web' $name 'Passw0rd!x'
-$appToken = Get-Token 'greenhaus-e2e' $name 'Passw0rd!x'
+$name = if ($Username) { $Username } else { 'buyer' + (Get-Date -Format 'MMddHHmmss') }
+$status = try {
+    (Invoke-WebRequest -Method Post -Uri "$keycloak/admin/realms/greenhaus/users" -Headers @{ Authorization = "Bearer $master" } -ContentType 'application/json' -UseBasicParsing `
+        -Body (@{ username = $name; email = "$name@example.com"; firstName = 'Demo'; lastName = 'Gardener'; enabled = $true; emailVerified = $true
+                  credentials = @(@{ type = 'password'; value = $Password; temporary = $false }) } | ConvertTo-Json -Depth 5)).StatusCode
+} catch { [int]$_.Exception.Response.StatusCode }
+# A person chosen with -Username may already exist from an earlier run.
+Check 'the person exists in the realm' ($status -eq 201 -or ($Username -and $status -eq 409)) "(status $status)"
+$shopToken = Get-Token 'orderflow-web' $name $Password
+$appToken = Get-Token 'greenhaus-e2e' $name $Password
 $sub = Read-Subject $shopToken
 Check 'one subject in the shop and in the Greenhaus API' ((Read-Subject $appToken) -eq $sub) "($sub)"
 
@@ -236,7 +244,7 @@ Check 'the order timeline has the Activated step with the device id' ($activated
 $final = Call 'GET' "$gateway/orders/$orderId" $shopToken
 Check 'the order is shipped and in use' ($final.status -eq 'Shipped' -and [bool]$final.activatedAt)
 
-$null = Invoke-Docker rm -f "eco-kit-$deviceId"
+if (-not $KeepRunning) { $null = Invoke-Docker rm -f "eco-kit-$deviceId" }
 
 if ($Return -or $WaitForRevocation) {
     Step 'The person returns the goods: the purchase grant is at risk'
