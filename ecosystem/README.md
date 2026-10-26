@@ -29,7 +29,7 @@ The compose files of each project are used as they are, plus one small file each
 
 ## What the check proves
 
-Each step asserts something another project must have done: the order's customer is the same Keycloak subject the Greenhaus API sees, billing's grant reaches that subject as a Gardener tier, fulfilment's `device.allocated.v1` makes Pulse register the device with the kit's channels and actuators, the shop's `order.shipped.v1` makes fulfilment ship it in Pulse, the claim binds the device to the person in Pulse and links it to a pot, a reading sent to Pulse shows in the pot's status, the assistant (Docs-Brain, mock AI) answers a question about the pot from the facts Greenhaus gave it, including the reading, and the question counts against the monthly quota, and the claim event marks the order as in use in the shop.
+Each step asserts something another project must have done: the order's customer is the same Keycloak subject the Greenhaus API sees, billing's grant reaches that subject as a Gardener tier, fulfilment's `device.allocated.v1` makes Pulse register the device with the kit's channels and actuators, the shop's `order.shipped.v1` makes fulfilment ship it in Pulse, the pot's target becomes an alert rule in Pulse and a reading that breaks it raises an alert that reaches the person as a notification, the claim binds the device to the person in Pulse and links it to a pot, a reading sent to Pulse shows in the pot's status, the assistant (Docs-Brain, mock AI) answers a question about the pot from the facts Greenhaus gave it, including the reading, and the question counts against the monthly quota, and the claim event marks the order as in use in the shop.
 
 ## Known limits
 
