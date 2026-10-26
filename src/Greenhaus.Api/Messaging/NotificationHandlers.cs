@@ -56,7 +56,7 @@ public static class NotificationHandlers
     }
 
     /// <summary>A lower tier is told as a plan change, a grant that is at risk as a deadline.</summary>
-    public static async Task PlanAsync(JsonElement p, bool applied, IServiceProvider services, CancellationToken ct)
+    public static async Task PlanAsync(JsonElement p, bool applied, IReadOnlyList<string> lowered, IServiceProvider services, CancellationToken ct)
     {
         if (!applied) return; // an old event that arrived late says nothing new
         var userId = p.GetProperty("userId").GetString()!;
@@ -75,9 +75,10 @@ public static class NotificationHandlers
         }
         else if (to < from)
         {
-            await notifier.NotifyOnceAsync(userId, null, "plan_changed",
-                new Dictionary<string, string> { ["from"] = from.ToString().ToLowerInvariant(), ["to"] = to.ToString().ToLowerInvariant() },
-                $"plan:{at}:changed", null, ct);
+            var parameters = new Dictionary<string, string> { ["from"] = from.ToString().ToLowerInvariant(), ["to"] = to.ToString().ToLowerInvariant() };
+            // The automation the lower plan no longer includes, so the person hears what was switched to notify-only (D25).
+            if (lowered.Count > 0) parameters["lowered"] = string.Join(", ", lowered);
+            await notifier.NotifyOnceAsync(userId, null, "plan_changed", parameters, $"plan:{at}:changed", null, ct);
         }
     }
 }

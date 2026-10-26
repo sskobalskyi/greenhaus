@@ -33,6 +33,8 @@ public sealed class GreenhausFixture : IAsyncLifetime
         {
             b.UseSetting("ConnectionStrings:Greenhaus", _postgres.GetConnectionString());
             b.UseSetting("Auth:Mode", "Development");
+            // Tests drive the control loop by hand, so the background one would only get in the way.
+            b.UseSetting("Automation:Enabled", "false");
             b.UseSetting("RabbitMq:Host", _rabbit.Hostname);
             b.UseSetting("RabbitMq:Port", _rabbit.GetMappedPublicPort(5672).ToString());
             b.UseSetting("RabbitMq:User", RabbitMqBuilder.DefaultUsername);
@@ -57,6 +59,13 @@ public sealed class GreenhausFixture : IAsyncLifetime
     public static string NewUser() => "user-" + Guid.NewGuid().ToString("N")[..12];
 
     public static Dictionary<string, string> As(string user) => new() { ["X-User-Id"] = user };
+
+    /// <summary>Runs something with the services of the running API in one scope.</summary>
+    public async Task<T> WithScope<T>(Func<IServiceProvider, Task<T>> action)
+    {
+        using var scope = _factory!.Services.CreateScope();
+        return await action(scope.ServiceProvider);
+    }
 
     public async Task<T> WithDb<T>(Func<GreenhausDbContext, Task<T>> action)
     {

@@ -120,6 +120,24 @@ public class ActuatorEntity
     public int HardMinIntervalSeconds { get; set; }
     public int HardDailyCapSeconds { get; set; }
     public DateTimeOffset? LastRunAt { get; set; }
+
+    // What the control loop needs to remember between cycles.
+    /// <summary>Idle, or Blocked after a safety stop (dry run) until the user acts. Running is derived from <see cref="RunningUntil"/>.</summary>
+    public ActuatorState State { get; set; }
+    public string? BlockedReason { get; set; }
+    public int LastRunSeconds { get; set; }
+    public DateTimeOffset? RunningUntil { get; set; }
+    /// <summary>Total run time on <see cref="CounterDay"/> (UTC), counted against the daily cap. Manual and automatic runs both count.</summary>
+    public int RunSecondsToday { get; set; }
+    public DateOnly? CounterDay { get; set; }
+    /// <summary>Runs in a row after which the metric did not move.</summary>
+    public int FruitlessRuns { get; set; }
+    /// <summary>The reading the last automatic run started from, to see whether it helped.</summary>
+    public double? LastRunStartValue { get; set; }
+    /// <summary>Set while a notify-mode suggestion for the current episode has been sent, so it is sent once.</summary>
+    public DateTimeOffset? SuggestedAt { get; set; }
+    /// <summary>The last safety reason that was written down, so a lasting condition is said once, not every cycle.</summary>
+    public string? LastNoteCode { get; set; }
 }
 
 public class AuditEntity

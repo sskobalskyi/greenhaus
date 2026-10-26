@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Greenhaus.Api.Automation;
 using Greenhaus.Api.Features;
 using Greenhaus.Api.Infrastructure;
 using Greenhaus.Api.Persistence;
@@ -128,9 +129,19 @@ public static class EventHandlers
         var source = reason.StartsWith("grant_", StringComparison.Ordinal) ? "purchase_grant" : "subscription";
         var status = reason switch { "grant_at_risk" => "at_risk", "payment_failed" => "past_due", _ => "active" };
         var validUntil = p.TryGetProperty("validUntil", out var v) && v.ValueKind == JsonValueKind.String ? v.GetDateTimeOffset() : (DateTimeOffset?)null;
+        var userId = p.GetProperty("userId").GetString()!;
         var applied = await services.GetRequiredService<EntitlementService>()
-            .SetAsync(p.GetProperty("userId").GetString()!, tier, source, status, validUntil, p.GetProperty("at").GetDateTimeOffset(), ct);
-        await NotificationHandlers.PlanAsync(p, applied, services, ct);
+            .SetAsync(userId, tier, source, status, validUntil, p.GetProperty("at").GetDateTimeOffset(), ct);
+
+        // A lower plan lowers the automation it no longer includes, right away (D25). The new tier is saved first so the clamp sees it,
+        // and what was lowered goes into the plan-change notification instead of a second one.
+        IReadOnlyList<string> lowered = [];
+        if (applied)
+        {
+            await services.GetRequiredService<GreenhausDbContext>().SaveChangesAsync(ct);
+            lowered = (await services.GetRequiredService<TierClamp>().ClampAsync(userId, ct)).Lowered;
+        }
+        await NotificationHandlers.PlanAsync(p, applied, lowered, services, ct);
     }
 
     private static async Task DeviceAllocated(JsonElement p, IServiceProvider services, CancellationToken ct)

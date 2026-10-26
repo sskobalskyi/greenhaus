@@ -14,6 +14,7 @@ public sealed class FakePulse : IPulseClient
     public ConcurrentDictionary<string, IReadOnlyList<PulseRule>> Rules { get; } = new();
     public ConcurrentBag<(string Device, string Actuator, int Seconds)> Runs { get; } = [];
     public ConcurrentBag<(string Device, bool Enabled)> KillSwitches { get; } = [];
+    public ConcurrentBag<(string Device, string Actuator)> Stops { get; } = [];
     public ConcurrentDictionary<(string, string), (double, double)> Calibrations { get; } = new();
     public bool Down { get; set; }
 
@@ -67,6 +68,13 @@ public sealed class FakePulse : IPulseClient
     {
         Check();
         Runs.Add((deviceId, actuatorId, seconds));
+        return Task.FromResult(new PulseCommand(commandId, "queued"));
+    }
+
+    public Task<PulseCommand> StopActuatorAsync(string deviceId, string actuatorId, Guid commandId, DateTimeOffset expiresAt, CancellationToken ct)
+    {
+        Check();
+        Stops.Add((deviceId, actuatorId));
         return Task.FromResult(new PulseCommand(commandId, "queued"));
     }
 

@@ -31,12 +31,22 @@ namespace Greenhaus.Api.Persistence.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("BlockedReason")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateOnly?>("CounterDay")
+                        .HasColumnType("date");
+
                     b.Property<int>("DailyCapSeconds")
                         .HasColumnType("integer");
 
                     b.Property<string>("DeviceId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("FruitlessRuns")
+                        .HasColumnType("integer");
 
                     b.Property<int>("HardDailyCapSeconds")
                         .HasColumnType("integer");
@@ -52,8 +62,18 @@ namespace Greenhaus.Api.Persistence.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
 
+                    b.Property<string>("LastNoteCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
                     b.Property<DateTimeOffset?>("LastRunAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LastRunSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("LastRunStartValue")
+                        .HasColumnType("double precision");
 
                     b.Property<int?>("MaxFruitlessRuns")
                         .HasColumnType("integer");
@@ -68,6 +88,20 @@ namespace Greenhaus.Api.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(16)
                         .HasColumnType("character varying(16)");
+
+                    b.Property<int>("RunSecondsToday")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("RunningUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTimeOffset?>("SuggestedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("PotId", "Id");
 

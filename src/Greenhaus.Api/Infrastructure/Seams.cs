@@ -14,4 +14,6 @@ public interface IReadingSource
 public interface ICommandSender
 {
     Task<Guid> RunAsync(string deviceId, string actuatorId, int seconds, CancellationToken ct);
+    /// <summary>Stops an actuator that is running before its time is up.</summary>
+    Task<Guid> StopAsync(string deviceId, string actuatorId, CancellationToken ct);
 }
