@@ -25,7 +25,8 @@ public sealed class AsyncApiContract
         {
             ["$schema"] = "https://json-schema.org/draft/2020-12/schema",
             ["$id"] = BaseUri,
-            ["$defs"] = _document["components"]!["schemas"]!.DeepClone(),
+            // The device topics document has messages but no shared schemas, so the definitions may be absent.
+            ["$defs"] = _document["components"]!["schemas"]?.DeepClone() ?? new JsonObject(),
         };
         JsonSchema.FromText(Rewrite(definitions).ToJsonString(), _options, new Uri(BaseUri));
     }
