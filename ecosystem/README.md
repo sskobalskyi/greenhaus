@@ -23,7 +23,7 @@ Needs Docker and PowerShell. `up.ps1 -Refresh` exports the projects again from t
 | Orderflow gateway, web | `localhost:8080`, `localhost:5173` | Sells the kits from `data/shop-catalog.json` with the stock in `ecosystem/stock.json` |
 | Pulse API | `localhost:5080` | With events on, on the shared broker. Its dashboard is not started (it would claim 8080) |
 | Greenhaus API, billing, fulfilment | `8091`, `8092`, `8093` | Take their Pulse token from the shared realm |
-| Docs-Brain API | `localhost:5090` | The assistant behind the Greenhaus API. Mock AI (no model download), accepts the service token of the shared realm (`docsbrain.env`). Its web UI is not started (it would claim 8090) |
+| Docs-Brain API | `localhost:5090` | The assistant behind the Greenhaus API. Mock AI (no model download), accepts the service token of the shared realm (`docsbrain.env`). Its web UI is not started (it would claim 8090). `up.ps1` also writes one care text per species from `data/species.json` into its shared corpus (`ingest-care.ps1`, idempotent), so every assistant can cite them |
 
 The compose files of each project are used as they are, plus one small file each in this folder (`orderflow.yml`, `pulse.yml`, `greenhaus.yml`) that points them at the shared broker and seeds the shop. Orderflow and Pulse belong to other repositories, so the script builds them from a clean export of their `main` branch under `../.ecosystem`, never from a working tree that may hold unfinished work.
 
