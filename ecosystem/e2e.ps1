@@ -174,7 +174,7 @@ foreach ($m in $requirements.metrics) { if ($m.metric -eq 'soil_moisture') { $m.
 $null = Call 'PUT' "$greenhaus/pots/$($pot.id)/requirements" $appToken $requirements
 $rules = Wait-Until { $r = @(Call 'GET' "$pulse/api/pulse/v2/devices/$deviceId/rules" $service); if (@($r | Where-Object { $_.kind -eq 'threshold' -and $_.channelId -eq $soil.id }).Count) { $r } } 'the threshold rule to reach Pulse'
 Check 'the target became an alert rule in Pulse' ([bool]$rules)
-$alert = Wait-Until { $n = Call 'GET' "$greenhaus/notifications?unread=true" $appToken; $hit = @($n | Where-Object { $_.kind -eq 'alert_raised' }); if ($hit.Count) { $hit[0] } } 'the alert notification'
+$alert = Wait-Until { $n = Call 'GET' "$greenhaus/notifications?unread=true" $appToken; $hit = @($n | Where-Object { $_.kind -eq 'alert_raised' -and $_.potId -eq $pot.id }); if ($hit.Count) { $hit[0] } } 'the alert notification'
 Check 'the person has an unread alert notification for this pot' ([bool]$alert -and $alert.potId -eq $pot.id) "(notification: $($alert | ConvertTo-Json -Compress))"
 $status2 = Wait-Until { $s = Call 'GET' "$greenhaus/pots/$($pot.id)/status" $appToken; if ($s.state -eq 'attention') { $s } } 'the pot to show attention'
 Check 'the pot status says attention and names the worst zone' ([bool]$status2 -and [bool]$status2.worstZoneId)
@@ -236,6 +236,17 @@ $careEvents = @($careStream.Content -split "`n`n" | Where-Object { $_.Trim().Sta
 $sources = @($careEvents | Where-Object { $_.type -eq 'sources' } | ForEach-Object { $_.sources })
 $basil = @($sources | Where-Object { $_.shared -eq $true -and $_.title -like 'Basil*' })
 Check 'the answer cites the shared care text for basil' ($basil.Count -ge 1) "(sources: $(($sources | ForEach-Object { $_.title }) -join '; '))"
+
+# A Ukrainian question finds the Ukrainian text of the species (the embeddings do not bridge languages). The words come from the data file.
+$uk = Get-Content "$PSScriptRoot\..\data\care-texts-uk.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+$ukQuestion = ($uk.templates.water.Split(':')[0]).Replace('{acc}', $uk.species.basil.acc) + '?'
+$ukBody = [Text.Encoding]::UTF8.GetBytes((@{ question = $ukQuestion } | ConvertTo-Json -Compress))
+$ukStream = Invoke-WebRequest -Method Post -Uri "$greenhaus/pots/$($pot.id)/assistant/ask" -Headers @{ Authorization = "Bearer $appToken" } -ContentType 'application/json; charset=utf-8' -Body $ukBody -UseBasicParsing
+$ukRaw = [Text.Encoding]::UTF8.GetString($ukStream.RawContentStream.ToArray())
+$ukEvents = @($ukRaw -split "`n`n" | Where-Object { $_.Trim().StartsWith('data:') } | ForEach-Object { $_.Trim().Substring(5).Trim() | ConvertFrom-Json })
+$ukSources = @($ukEvents | Where-Object { $_.type -eq 'sources' } | ForEach-Object { $_.sources })
+$ukBasil = @($ukSources | Where-Object { $_.shared -eq $true -and $_.title -like ($uk.species.basil.name + '*') })
+Check 'a Ukrainian question cites the Ukrainian care text for basil' ($ukBasil.Count -ge 1) "(sources: $(($ukSources | ForEach-Object { $_.title }) -join '; '))"
 
 # ---------------------------------------------------------------------------------------------------------------------
 Step 'The shop shows the order as in use'

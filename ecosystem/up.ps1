@@ -72,11 +72,12 @@ if ($LASTEXITCODE) { throw 'Greenhaus did not start' }
 
 # Pulse: only what the check needs (API, Kafka-compatible broker, TimescaleDB, and EMQX for the devices, on host port 1884, which asks Pulse
 # who may connect: a device is its id and the credential from the packing bundle).
-# Its dashboard would claim port 8080.
+# Its dashboard is served on 8085 (PULSE_WEB_PORT), because 8080 is the Orderflow gateway; the pulse-web client of the shared realm allows it.
 Write-Host '== Pulse'
+$env:PULSE_WEB_PORT = '8085'
 docker compose -p eco-pulse --project-directory $pulse `
     -f "$pulse/docker-compose.yml" -f "$pulse/docker-compose.shared-realm.yml" -f "$pulse/docker-compose.events.yml" -f "$pulse/docker-compose.mqtt.yml" -f "$pulse/docker-compose.mqtt-auth.yml" -f "$greenhaus/ecosystem/pulse.yml" `
-    up -d --build redpanda timescaledb emqx api
+    up -d --build redpanda timescaledb emqx api web
 if ($LASTEXITCODE) { throw 'Pulse did not start' }
 
 # Docs-Brain: the assistant behind the Greenhaus API. Mock AI, so no model download; only its API and database. Its web UI would claim 8090.
@@ -95,6 +96,7 @@ Write-Host '== Waiting'
 Wait-Url 'http://localhost:8181/realms/greenhaus/.well-known/openid-configuration' 'Keycloak (greenhaus realm)'
 Wait-Url 'http://localhost:8080/health' 'Orderflow gateway'
 Wait-Url 'http://localhost:5080/health' 'Pulse API'
+Wait-Url 'http://localhost:8085' 'Pulse dashboard'
 Wait-Url 'http://localhost:8091/health' 'Greenhaus API'
 Wait-Url 'http://localhost:8092/health' 'Greenhaus billing'
 Wait-Url 'http://localhost:8093/health' 'Greenhaus fulfilment'
