@@ -1,6 +1,12 @@
 # Applied on top of Orderflow's own compose files: the shop sells the Greenhaus kits.
 # GREENHAUS_DIR is set by up.ps1 (forward slashes, no trailing slash).
 services:
+  # The shop is the Greenhaus shop here, with a way back to the app (the Vite dev server of the Greenhaus web app).
+  web:
+    build:
+      args:
+        VITE_SHOP_NAME: Greenhaus Shop
+        VITE_HOME_URL: http://localhost:5174
   catalog:
     environment:
       Catalog__SeedFile: /seed/products.json

@@ -10,6 +10,8 @@ param(
     [switch]$Return,
     # With -Return, also wait for the grace period to end and the tier to fall back (needs up.ps1 -ShortGrace).
     [switch]$WaitForRevocation,
+    # Also return the goods and then cancel the return: the grant is at risk, then active again with its end date.
+    [switch]$CancelReturn,
     # Use this person instead of a new random one (it is created if it does not exist), for example to leave a demo account behind.
     [string]$Username,
     [string]$Password = 'Passw0rd!x',
@@ -257,12 +259,25 @@ Check 'the order is shipped and in use' ($final.status -eq 'Shipped' -and [bool]
 
 if (-not $KeepRunning) { $null = Invoke-Docker rm -f "eco-kit-$deviceId" }
 
-if ($Return -or $WaitForRevocation) {
+if ($Return -or $WaitForRevocation -or $CancelReturn) {
     Step 'The person returns the goods: the purchase grant is at risk'
     $null = Call 'POST' "$gateway/orders/$orderId/return" $shopToken
     $risk = Wait-Until { $e = Call 'GET' "$greenhaus/me/entitlements" $appToken; $s = @($e.sources | Where-Object { $_.status -eq 'at_risk' }); if ($s.Count) { $e } } 'the grant to become at risk'
     Check 'the grant is at risk, with the deadline to resolve it' ([bool]$risk -and [bool]@($risk.sources)[0].graceEndsAt)
     Check 'the person keeps the tier during the grace period' ($risk.tier -eq 'gardener')
+
+    if ($CancelReturn) {
+        Step 'The person cancels the return: the purchase grant is active again'
+        # The end date the grant had when it was bought (the at-risk entry shows the grace deadline instead).
+        $endBefore = @($tier.sources | Where-Object { $_.type -eq 'purchase_grant' })[0].validUntil
+        $null = Call 'POST' "$gateway/orders/$orderId/return/cancel" $shopToken
+        $back = Wait-Until { $e = Call 'GET' "$greenhaus/me/entitlements" $appToken; $s = @($e.sources | Where-Object { $_.type -eq 'purchase_grant' -and $_.status -eq 'active' }); if ($s.Count) { $e } } 'the grant to be active again'
+        Check 'the grant is active again' ([bool]$back)
+        Check 'it keeps its original end date' ($back -and @($back.sources | Where-Object { $_.type -eq 'purchase_grant' })[0].validUntil -eq $endBefore)
+        Check 'the tier is Gardener and nothing is at risk' ($back.tier -eq 'gardener' -and @($back.sources | Where-Object { $_.status -eq 'at_risk' }).Count -eq 0)
+        $afterCancel = Call 'GET' "$gateway/orders/$orderId" $shopToken
+        Check 'the shop has the order shipped again' ($afterCancel.status -eq 'Shipped')
+    }
 
     if ($WaitForRevocation) {
         Step 'The grace period ends: the grant is revoked and the tier falls back'
