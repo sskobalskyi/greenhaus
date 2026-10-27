@@ -38,6 +38,10 @@ channels:
     address: order.returned.v1
     messages:
       orderReturned: { $ref: '#/components/messages/OrderReturned' }
+  orderReturnCancelled:
+    address: order.return_cancelled.v1
+    messages:
+      orderReturnCancelled: { $ref: '#/components/messages/OrderReturnCancelled' }
   orderRefunded:
     address: order.refunded.v1
     messages:
@@ -112,6 +116,14 @@ operations:
     action: receive
     channel: { $ref: '#/channels/orderReturned' }
     summary: Billing moves the purchase grant to at risk.
+  publishOrderReturnCancelled:
+    action: send
+    channel: { $ref: '#/channels/orderReturnCancelled' }
+    summary: Orderflow publishes when a return that was not completed is cancelled, and the order is shipped again.
+  consumeOrderReturnCancelled:
+    action: receive
+    channel: { $ref: '#/channels/orderReturnCancelled' }
+    summary: Billing brings an at-risk purchase grant back to active.
   publishOrderRefunded:
     action: send
     channel: { $ref: '#/channels/orderRefunded' }
@@ -220,6 +232,20 @@ components:
           lines:
             type: array
             items: { $ref: '#/components/schemas/OrderLine' }
+    OrderReturnCancelled:
+      name: order.return_cancelled.v1
+      title: Order return cancelled
+      description: |
+        A return that was registered but not completed was cancelled, so the goods stay with the customer and the order is
+        shipped again. Not sent after a refund: a refund that went through is not undone by this event.
+      headers: { $ref: '#/components/schemas/Headers' }
+      payload:
+        type: object
+        required: [orderId, customerId, cancelledAt]
+        properties:
+          orderId: { type: string, format: uuid }
+          customerId: { type: string }
+          cancelledAt: { type: string, format: date-time }
     OrderRefunded:
       name: order.refunded.v1
       title: Order refunded
