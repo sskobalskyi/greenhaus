@@ -41,6 +41,7 @@ test.describe('on a phone', () => {
     await page.addInitScript(() => localStorage.setItem('locale', 'uk'))
     await page.goto('/')
     await page.getByRole('link', { name: 'Kitchen herbs' }).first().click()
+    await page.waitForURL(/\/pots\//)
     await page.goto(page.url().replace(/\?.*$/, '') + '?tab=assistant')
     const active = page.getByRole('tab', { name: 'Помічник', selected: true })
     await expect(active).toBeVisible()
