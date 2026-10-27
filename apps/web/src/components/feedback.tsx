@@ -8,7 +8,7 @@ export function LoadError({ onRetry }: { onRetry?: () => void }) {
     <div role="alert" className="flex flex-col items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/5 p-4">
       <p className="flex items-center gap-2 font-semibold text-destructive">
         <TriangleAlert className="size-5" aria-hidden />
-        {t('app.loadFailed')}
+        {import.meta.env.VITE_MOCK === 'false' ? t('app.loadFailed') : t('app.loadFailedMock')}
       </p>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>

@@ -114,7 +114,19 @@ export function PotsPage() {
 
       {pots.isError && <LoadError onRetry={() => void pots.refetch()} />}
       {pots.isPending && <CardGridSkeleton />}
-      {pots.data && pots.data.length === 0 && <p className="text-muted-foreground">{t('pots.empty')}</p>}
+      {pots.data && pots.data.length === 0 && (
+        <div className="flex flex-col items-start gap-3 rounded-xl border border-dashed bg-card p-5">
+          <p className="text-muted-foreground">{t('pots.empty')}</p>
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold">
+            <Link to="/claim" className="underline underline-offset-4">
+              {t('pots.emptyClaim')}
+            </Link>
+            <Link to="/guide" className="underline underline-offset-4">
+              {t('pots.emptyGuide')}
+            </Link>
+          </p>
+        </div>
+      )}
       {pots.data && pots.data.length > 0 && (
         <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {pots.data.map((pot) => (

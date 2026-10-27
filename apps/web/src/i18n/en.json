@@ -1,11 +1,13 @@
 {
   "app": {
     "name": "Greenhaus",
-    "nav": { "pots": "My pots", "plans": "Plans", "guide": "Set-up guide" },
+    "nav": { "label": "Main", "pots": "My pots", "plans": "Plans", "guide": "Set-up guide" },
     "auth": { "signIn": "Sign in", "signOut": "Sign out", "signingIn": "Taking you to sign in...", "failed": "Signing in did not work. Please try again." },
+    "skipToContent": "Skip to content",
     "mockTier": "Mock tier",
     "mockTierLabel": "Mock:",
-    "loadFailed": "Could not load this. Is the API running? Start the mock with: docker compose up mock",
+    "loadFailed": "Could not load this. Check your connection and try again.",
+    "loadFailedMock": "Could not load this. Is the API running? Start the mock with: docker compose up mock",
     "retry": "Try again",
     "errors": {
       "thermal_cutoff_required": "A heater cannot run in auto mode without a hardware thermal cutoff.",
@@ -28,6 +30,8 @@
     "kind": "What is it?",
     "create": "Create pot",
     "empty": "No pots yet. Add your first one.",
+    "emptyClaim": "I have a controller: connect it",
+    "emptyGuide": "Read the set-up guide",
     "limit": "Your {{tier}} plan includes {{count}} pots."
   },
   "pot": {
@@ -108,6 +112,7 @@
       "online": "Online",
       "offline": "Offline",
       "lastSeen": "Last seen {{when}}",
+      "justNow": "just now",
       "firmware": "Firmware {{version}}",
       "cutoffYes": "Thermal cutoff declared",
       "cutoffNo": "No thermal cutoff declared"
