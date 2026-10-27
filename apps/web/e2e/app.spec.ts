@@ -38,6 +38,8 @@ test.describe('pots overview', () => {
     const dialog = page.getByRole('dialog', { name: 'This needs a higher plan' })
     await expect(dialog).toBeVisible()
     await expect(dialog).toContainText('Gardener')
+    // The price comes from billing, not a placeholder.
+    await expect(dialog).toContainText(/3[.,]00/)
     await dialog.getByRole('link', { name: 'See plans' }).click()
     await expect(page).toHaveURL(/\/plans$/)
   })
@@ -99,7 +101,7 @@ test.describe('controls', () => {
     await page.getByRole('button', { name: 'Stop everything' }).click()
     await expect(page.getByText('Everything is stopped')).toBeVisible()
     await expect(page.getByRole('button', { name: /Run for/ }).first()).toBeDisabled()
-    await expect(page.getByText('Kill switch turned on')).toBeVisible()
+    await expect(page.getByText('All automation stopped by you')).toBeVisible()
   })
 })
 

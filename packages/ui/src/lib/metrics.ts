@@ -48,6 +48,11 @@ export const defaultUnit: Record<Metric, string> = {
   airflow: '',
 }
 
+/** A unit as people write it: devices send plain `C`, people expect the degree sign. */
+export function displayUnit(unit: string): string {
+  return unit === 'C' ? '\u00B0C' : unit
+}
+
 /** Formats a reading for display: whole lux, one decimal elsewhere, with the locale's separators. */
 export function formatValue(metric: Metric, value: number, locale: string): string {
   return new Intl.NumberFormat(locale, { maximumFractionDigits: metric === 'light' ? 0 : 1 }).format(value)

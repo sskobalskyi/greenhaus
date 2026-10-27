@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Metric, ReadingState, Schemas } from '@/api/client'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { defaultUnit, formatValue, metricIcon, metrics } from '@/lib/metrics'
+import { defaultUnit, displayUnit, formatValue, metricIcon, metrics } from '@/lib/metrics'
 import { zoneName } from '@/lib/zone'
 import { cn } from '@/lib/utils'
 
@@ -66,7 +66,7 @@ export function PotZoneMap({ rows, cols, zones, status, requirements, initialMet
           const reading = status.zones.find((z) => z.zoneId === zone.id)?.metrics.find((r) => r.metric === metric)
           const state: ReadingState = reading?.state ?? 'unknown'
           const target = requirements.metrics.find((m) => m.metric === metric && m.enabled)
-          const unit = reading?.unit ?? defaultUnit[metric]
+          const unit = displayUnit(reading?.unit ?? defaultUnit[metric])
           const valueText = reading?.value == null ? t('zoneMap.noData') : `${formatValue(metric, reading.value, i18n.language)} ${unit}`.trim()
           return (
             <li

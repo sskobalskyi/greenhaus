@@ -19,12 +19,13 @@ import {
   TabsTrigger,
   ToggleGroup,
   ToggleGroupItem,
+  auditText,
   zoneName,
   type ControlMode,
   type Schemas,
 } from '@greenhaus/ui'
 import { ArrowLeft, OctagonX, Trash2, TriangleAlert } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router'
 import {
@@ -176,7 +177,9 @@ function Plants({ pot }: { pot: Pot }) {
 
   if (plants.isError || species.isError) return <LoadError />
   if (!plants.data || !species.data) return <BlockSkeleton />
-  const nameOf = (id: string) => species.data.find((s) => s.id === id)?.commonName ?? id
+  // The catalog has English common names only, so other languages bring their own and the catalog name is the fallback.
+  const label = (id: string, fallback: string) => t(`species.${id}`, { defaultValue: fallback })
+  const nameOf = (id: string) => label(id, species.data.find((s) => s.id === id)?.commonName ?? id)
   const conflicts = suggestion.data?.conflicts ?? []
 
   const submit = (event: FormEvent) => {
@@ -228,7 +231,7 @@ function Plants({ pot }: { pot: Pot }) {
             <SelectContent>
               {species.data.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
-                  {s.commonName}
+                  {label(s.id, s.commonName)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -275,7 +278,7 @@ function Controls({ pot, onPlanLimit }: { pot: Pot; onPlanLimit: (error: ApiErro
     else if (error instanceof ApiError && error.code === 'calibration_required') setNeedsCalibration(true)
     else setNotice(errorText(t, error))
   }
-  const time = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'short', timeStyle: 'short' })
+  const time = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })
 
   return (
     <div className="space-y-6">
@@ -347,8 +350,9 @@ function Controls({ pot, onPlanLimit }: { pot: Pot; onPlanLimit: (error: ApiErro
               <span className="flex flex-wrap items-center gap-2">
                 <Badge variant={entry.actor === 'safety' ? 'destructive' : 'secondary'}>{t(`pot.controls.actor.${entry.actor}`)}</Badge>
                 <span className="text-muted-foreground">{time.format(new Date(entry.at))}</span>
+                {entry.outcome && <Badge variant={entry.outcome === 'completed' ? 'outline' : 'destructive'}>{t(`audit.outcome.${entry.outcome}`)}</Badge>}
               </span>
-              <p className="mt-1">{entry.reason}</p>
+              <p className="mt-1">{auditText(t, i18n.language, entry.reason)}</p>
             </li>
           ))}
         </ul>
@@ -397,11 +401,21 @@ function Care({ pot }: { pot: Pot }) {
 function Devices({ pot }: { pot: Pot }) {
   const { t, i18n } = useTranslation()
   const devices = useDevices(pot.id)
+  const actuators = useActuators(pot.id)
   const [now] = useState(() => Date.now())
   if (devices.isError) return <LoadError />
   if (!devices.data) return <BlockSkeleton />
-  const when = (iso?: string | null) =>
-    iso ? new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' }).format(Math.round((new Date(iso).getTime() - now) / 60000), 'minute') : ''
+  // A thermal cutoff matters for a heater only, so a controller without one is not shown as missing a safety feature.
+  const hasHeater = actuators.data?.some((a) => a.kind === 'heater') ?? false
+  const when = (iso?: string | null) => {
+    if (!iso) return ''
+    const seconds = Math.round((new Date(iso).getTime() - now) / 1000)
+    if (Math.abs(seconds) < 60) return t('pot.devices.justNow')
+    const relative = new Intl.RelativeTimeFormat(i18n.language, { numeric: 'auto' })
+    if (Math.abs(seconds) < 3600) return relative.format(Math.round(seconds / 60), 'minute')
+    if (Math.abs(seconds) < 86400) return relative.format(Math.round(seconds / 3600), 'hour')
+    return relative.format(Math.round(seconds / 86400), 'day')
+  }
 
   return (
     <section aria-labelledby="devices-title" className="space-y-3">
@@ -424,7 +438,7 @@ function Devices({ pot }: { pot: Pot }) {
               <Badge variant={device.status === 'online' ? 'secondary' : 'destructive'}>
                 {device.status === 'online' ? t('pot.devices.online') : t('pot.devices.offline')}
               </Badge>
-              <Badge variant="outline">{device.thermalCutoffDeclared ? t('pot.devices.cutoffYes') : t('pot.devices.cutoffNo')}</Badge>
+              {(hasHeater || device.thermalCutoffDeclared) && <Badge variant="outline">{device.thermalCutoffDeclared ? t('pot.devices.cutoffYes') : t('pot.devices.cutoffNo')}</Badge>}
             </div>
           </li>
         ))}
@@ -443,6 +457,11 @@ export function PotPage() {
   const status = usePotStatus(potId)
   const [upsell, setUpsell] = useState<ApiError | null>(null)
   const tab = (tabs as readonly string[]).includes(params.get('tab') ?? '') ? (params.get('tab') as string) : 'overview'
+  // On a phone the tab list scrolls, so the tab that opens (also from a link) is brought into view.
+  const loaded = pot.data !== undefined
+  useEffect(() => {
+    if (loaded) document.querySelector('[role="tab"][data-state="active"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [tab, loaded])
 
   if (pot.isError) return <LoadError onRetry={() => void pot.refetch()} />
   if (!pot.data) return <BlockSkeleton className="h-96" />
@@ -467,7 +486,7 @@ export function PotPage() {
       </div>
 
       <Tabs value={tab} onValueChange={(value) => setParams({ tab: value })}>
-        <TabsList className="h-auto flex-wrap justify-start">
+        <TabsList className="h-auto max-w-full justify-start overflow-x-auto [&>*]:shrink-0">
           {tabs.map((name) => (
             <TabsTrigger key={name} value={name}>
               {t(`pot.tabs.${name}`)}

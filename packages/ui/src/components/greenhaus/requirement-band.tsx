@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { Metric, ReadingState } from '@/api/client'
-import { defaultUnit, formatValue, metricBand, metricIcon, metricText } from '@/lib/metrics'
+import { defaultUnit, displayUnit, formatValue, metricBand, metricIcon, metricText } from '@/lib/metrics'
 import { cn } from '@/lib/utils'
 
 export interface RequirementBandProps {
@@ -19,7 +19,7 @@ export interface RequirementBandProps {
 export function RequirementBand({ metric, value, min, max, unit, state = 'ok', compact, className }: RequirementBandProps) {
   const { t, i18n } = useTranslation()
   const Icon = metricIcon[metric]
-  const unitText = unit ?? defaultUnit[metric]
+  const unitText = displayUnit(unit ?? defaultUnit[metric])
   const hasTarget = min !== undefined && max !== undefined
   const width = hasTarget ? max - min : 1
   const low = hasTarget ? min - width * 0.6 : 0
@@ -42,6 +42,8 @@ export function RequirementBand({ metric, value, min, max, unit, state = 'ok', c
           {direction && <span className="ml-1 text-xs font-semibold text-attention-ink">{direction}</span>}
         </span>
       </div>
+      {/* Without a target there is nothing to measure against, so no empty track: the number says it all. */}
+      {(hasTarget || value == null) && (
       <div
         // A meter must have a value, so a missing reading is described as an image instead.
         {...(value == null
@@ -72,6 +74,7 @@ export function RequirementBand({ metric, value, min, max, unit, state = 'ok', c
           />
         )}
       </div>
+      )}
       {!compact && targetText && <p className="text-xs text-muted-foreground">{targetText}</p>}
     </div>
   )

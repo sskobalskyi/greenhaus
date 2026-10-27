@@ -66,7 +66,7 @@ export function ActuatorControl({ actuator, killSwitch, requiredTier, onModeChan
           onValueChange={(value) => value && onModeChange?.(value as ControlMode)}
           aria-label={t('mode.label')}
           disabled={killSwitch}
-          className="w-full"
+          className="w-full items-stretch"
         >
           {order.map((mode) => {
             const isLocked = locked(mode)
@@ -76,7 +76,7 @@ export function ActuatorControl({ actuator, killSwitch, requiredTier, onModeChan
                 value={mode}
                 disabled={isLocked}
                 aria-disabled={isLocked}
-                className="flex-1 gap-1.5"
+                className="h-auto min-h-9 flex-1 gap-1.5 px-2 py-1.5 text-center text-xs whitespace-normal sm:text-sm"
               >
                 {isLocked && <Lock className="size-3.5" aria-hidden />}
                 {t(`mode.${mode}`)}

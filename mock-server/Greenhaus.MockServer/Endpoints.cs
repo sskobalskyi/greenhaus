@@ -314,7 +314,7 @@ public static class Endpoints
                 var previous = actuator.Mode;
                 actuator.Mode = body.Mode.Value;
                 actuator.MaxModeForTier = max;
-                Audit(p, "user", "mode_changed", $"Mode changed from {previous} to {actuator.Mode}", actuatorId, "completed");
+                Audit(p, "user", "mode_changed", $"{previous} -> {actuator.Mode}".ToLowerInvariant(), actuatorId, "completed");
                 return Results.Ok(actuator);
             }
         });
@@ -335,7 +335,7 @@ public static class Endpoints
 
                 var duration = Math.Min(body.DurationSeconds.Value, actuator.Limits.MaxRunSeconds);
                 actuator.LastRunAt = DateTimeOffset.UtcNow;
-                Audit(p, "user", "run", $"Manual run for {duration} s", actuatorId, "completed");
+                Audit(p, "user", "run", $"{duration} s requested by the user", actuatorId, "completed");
                 return Results.Json(new CommandReceipt { CommandId = Guid.NewGuid(), Status = "sent" }, statusCode: 202);
             }
         });
@@ -353,7 +353,7 @@ public static class Endpoints
                 if (body.MaxRunSeconds > hard.MaxRunSeconds || body.DailyCapSeconds > hard.DailyCapSeconds || body.MinIntervalSeconds < hard.MinIntervalSeconds)
                     return Fail(400, "exceeds_hard_limit", "Limits can only be tightened within the controller's hard limits");
                 actuator.Limits = body;
-                Audit(p, "user", "limit_changed", "Safety limits were tightened", actuatorId, "completed");
+                Audit(p, "user", "limit_changed", "Safety limits tightened", actuatorId, "completed");
                 return Results.Ok(actuator);
             }
         });
@@ -365,7 +365,7 @@ public static class Endpoints
                 if (!s.Pots.TryGetValue(potId, out var p)) return NotFound();
                 if (body.Enabled is null) return Fail(400, "validation_failed", "enabled is required");
                 p.Pot.KillSwitch = body.Enabled.Value;
-                Audit(p, "user", "kill_switch", body.Enabled.Value ? "Kill switch turned on" : "Kill switch turned off", null, "completed");
+                Audit(p, "user", "kill_switch", body.Enabled.Value ? "All automation stopped by the user" : "Automation resumed by the user", null, "completed");
                 return Results.Ok(p.Pot);
             }
         });
