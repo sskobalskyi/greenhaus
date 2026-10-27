@@ -65,6 +65,12 @@ export const Lamp: Story = {
   },
 }
 
+// The longest Ukrainian mode label wraps inside its segment instead of being cut off.
+export const UkrainianNarrow: Story = {
+  globals: { locale: 'uk' },
+  decorators: [(Story) => <div className="w-[340px]"><Story /></div>],
+}
+
 export const UkrainianDark: Story = {
   globals: { locale: 'uk', theme: 'dark' },
   args: {

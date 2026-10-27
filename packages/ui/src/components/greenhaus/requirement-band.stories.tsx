@@ -25,6 +25,17 @@ export const TooWet: Story = { args: { value: 73, state: 'attention' } }
 export const NoReading: Story = { args: { value: null, state: 'unknown' } }
 export const Compact: Story = { args: { compact: true } }
 
+// A reading with no target has nothing to be measured against, so it is the number alone, with no empty track.
+export const NoTarget: Story = {
+  args: { metric: 'temperature', value: 20, min: undefined, max: undefined, unit: 'C' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('meter')).toBeNull()
+    // Devices send a plain C, people read a degree sign.
+    await expect(canvas.getByText('20 °C')).toBeInTheDocument()
+  },
+}
+
 export const Temperature: Story = {
   args: { metric: 'temperature', value: 31, min: 18, max: 27, unit: '°C', state: 'attention' },
 }
