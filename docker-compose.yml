@@ -105,6 +105,9 @@ services:
       # Shorten these to watch renewals and the grace period of a returned order run in seconds, for example 00:00:20.
       Billing__Period: ${BILLING_PERIOD:-30.00:00:00}
       Billing__Grace: ${BILLING_GRACE:-7.00:00:00}
+      # A failed payment is retried every RETRY, and a subscription still past due after DUNNING is cancelled.
+      Billing__RetryInterval: ${BILLING_RETRY:-1.00:00:00}
+      Billing__DunningPeriod: ${BILLING_DUNNING:-7.00:00:00}
       Billing__TickInterval: ${BILLING_TICK:-00:00:30}
     ports:
       - "8092:8080"
