@@ -111,7 +111,8 @@ public static class EventHandlers
     public static Task HandleAsync(string routingKey, JsonElement payload, IServiceProvider services, CancellationToken ct) => routingKey switch
     {
         "order.confirmed.v1" => OrderConfirmed(payload, services, ct),
-        "order.returned.v1" or "order.refunded.v1" => OrderReversed(payload, services, ct),
+        "order.returned.v1" or "order.refunded.v1" => OrderReversed(routingKey, payload, services, ct),
+        "order.return_cancelled.v1" => ReturnCancelled(payload, services, ct),
         _ => throw new InvalidDataException($"No handler for {routingKey}"),
     };
 
@@ -151,22 +152,55 @@ public static class EventHandlers
 
     /// <summary>
     /// A return or a refund puts the grant of that order at risk for the grace period. A refund can also cancel an order that was
-    /// never shipped, which has the same effect. Anything else (no grant, already at risk or revoked) changes nothing.
+    /// never shipped, which has the same effect. A grant that is already at risk keeps its grace period, but a refund arriving after a
+    /// return takes away the chance to undo it. Anything else (no grant, revoked) changes nothing.
     /// </summary>
-    private static async Task OrderReversed(JsonElement p, IServiceProvider services, CancellationToken ct)
+    private static async Task OrderReversed(string routingKey, JsonElement p, IServiceProvider services, CancellationToken ct)
     {
         var db = services.GetRequiredService<BillingDbContext>();
         var clock = services.GetRequiredService<TimeProvider>();
         var orderId = p.GetProperty("orderId").GetGuid();
+        var reason = routingKey == "order.refunded.v1" ? "refunded" : "returned";
 
         var grant = await db.Grants.FirstOrDefaultAsync(g => g.OrderId == orderId, ct);
+        if (grant is { Status: "at_risk" } && reason == "refunded" && grant.AtRiskReason != "refunded")
+        {
+            grant.AtRiskReason = "refunded";
+            await db.SaveChangesAsync(ct);
+            return;
+        }
         if (grant is not { Status: "active" }) return;
 
+        grant.AtRiskReason = reason;
         grant.Status = "at_risk";
         grant.GraceEndsAt = clock.GetUtcNow() + services.GetRequiredService<IOptions<BillingOptions>>().Value.Grace;
         services.GetRequiredService<EventPublisher>().GrantChanged(grant);
         BillingTelemetry.GrantsChanged.Add(1, new KeyValuePair<string, object?>("status", "at_risk"));
         await db.SaveChangesAsync(ct);
         await services.GetRequiredService<EntitlementService>().RecomputeAsync(grant.UserId, "grant_at_risk", ct);
+    }
+
+    /// <summary>
+    /// A return that was registered but not completed was cancelled: the goods stay with the customer. The grant that the return put at
+    /// risk goes back to active with the end date it had, and the deadline is cleared. It is not restored when the grant is at risk
+    /// because of a refund, when its grace period is over (the job revokes it on its next run and a revoked grant stays revoked), or
+    /// when it is not at risk at all. A repeated event finds an active grant and changes nothing.
+    /// </summary>
+    private static async Task ReturnCancelled(JsonElement p, IServiceProvider services, CancellationToken ct)
+    {
+        var db = services.GetRequiredService<BillingDbContext>();
+        var clock = services.GetRequiredService<TimeProvider>();
+        var orderId = p.GetProperty("orderId").GetGuid();
+
+        var grant = await db.Grants.FirstOrDefaultAsync(g => g.OrderId == orderId, ct);
+        if (grant is not { Status: "at_risk", AtRiskReason: "returned" } || grant.GraceEndsAt is not { } grace || grace <= clock.GetUtcNow()) return;
+
+        grant.Status = "active";
+        grant.GraceEndsAt = null;
+        grant.AtRiskReason = null;
+        services.GetRequiredService<EventPublisher>().GrantChanged(grant);
+        BillingTelemetry.GrantsChanged.Add(1, new KeyValuePair<string, object?>("status", "active"));
+        await db.SaveChangesAsync(ct);
+        await services.GetRequiredService<EntitlementService>().RecomputeAsync(grant.UserId, "grant_started", ct);
     }
 }
