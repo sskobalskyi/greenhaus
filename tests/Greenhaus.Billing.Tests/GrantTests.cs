@@ -104,6 +104,26 @@ public class GrantTests(BillingFixture billing) : IAsyncLifetime
             return hit.Event;
         }, $"{routingKey} about {user}");
 
+    /// <summary>Orderflow's event for a return that was cancelled. The payload is checked against the AsyncAPI document before it is sent.</summary>
+    private async Task ReturnCancelled(string customer, Guid order, Guid? messageId = null)
+    {
+        var payload = new { orderId = order, customerId = customer, cancelledAt = DateTimeOffset.UtcNow };
+        billing.Events.VerifyPayload("order.return_cancelled.v1", JsonSerializer.Serialize(payload));
+        await Publish("order.return_cancelled.v1", payload, messageId);
+    }
+
+    private async Task<int> GrantEvents(Guid order, string status) =>
+        (await billing.WithDb(db => db.Outbox.Where(m => m.Type == "grant.status_changed.v1").ToListAsync()))
+            .Select(m => JsonNode.Parse(m.Payload)!)
+            .Count(b => b["orderId"]!.GetValue<Guid>() == order && b["status"]!.GetValue<string>() == status);
+
+    /// <summary>A later event for another order is handled after the earlier ones, so once its grant is there the earlier ones were seen.</summary>
+    private async Task Settled(string user)
+    {
+        var marker = Guid.NewGuid();
+        await Confirmed(user, marker, 30m);
+        await GrantOf(user, marker);
+    }
     private async Task<JsonNode> Grants(string user) => await Json(Call(user, "GET", "/grants"), HttpStatusCode.OK);
 
     private async Task<JsonNode> GrantOf(string user, Guid order) =>
@@ -323,5 +343,124 @@ public class GrantTests(BillingFixture billing) : IAsyncLifetime
 
         var dead = await Eventually(async () => await _channel.BasicGetAsync("billing.events.dead", true), "the poison message in the dead-letter queue");
         Assert.Contains("this is not json", Encoding.UTF8.GetString(dead.Body.Span));
+    }
+    [Fact]
+    public async Task A_return_cancelled_within_the_grace_period_brings_the_grant_back_to_active_with_its_end_date()
+    {
+        var user = BillingFixture.NewUser();
+        var order = Guid.NewGuid();
+        await Confirmed(user, order, 80m);
+        var original = await GrantOf(user, order);
+        await Listen("entitlement.changed.v1", user);
+        await Returned(user, order);
+        await Listen("entitlement.changed.v1", user, b => b["reason"]!.GetValue<string>() == "grant_at_risk");
+        billing.Clock.Advance(TimeSpan.FromDays(3));
+
+        await ReturnCancelled(user, order);
+        var restored = await Eventually(async () => (await Grants(user)).AsArray().FirstOrDefault(g => g!["status"]!.GetValue<string>() == "active"), "the grant to be active again");
+
+        Assert.Equal(original["validUntil"]!.GetValue<DateTimeOffset>(), restored["validUntil"]!.GetValue<DateTimeOffset>());
+        Assert.Null(restored["graceEndsAt"]);
+        var changed = await Listen("entitlement.changed.v1", user);
+        Assert.Equal("gardener", changed.Body["tier"]!.GetValue<string>());
+        Assert.Equal("gardener", changed.Body["previousTier"]!.GetValue<string>());
+        Assert.Equal("grant_started", changed.Body["reason"]!.GetValue<string>());
+        Assert.Equal(original["validUntil"]!.GetValue<DateTimeOffset>(), changed.Body["validUntil"]!.GetValue<DateTimeOffset>());
+        Assert.Equal("active", (await Listen("grant.status_changed.v1", user, b => b["status"]!.GetValue<string>() == "active")).Body["status"]!.GetValue<string>());
+
+        // The grace period is over for good: nothing revokes the restored grant.
+        billing.Clock.Advance(TimeSpan.FromDays(10));
+        Assert.Equal("active", (await Grants(user))[0]!["status"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task A_grant_that_was_revoked_after_the_grace_period_is_not_brought_back()
+    {
+        var user = BillingFixture.NewUser();
+        var order = Guid.NewGuid();
+        await Confirmed(user, order, 80m);
+        await GrantOf(user, order);
+        await Returned(user, order);
+        await Eventually(async () => (await Grants(user)).AsArray().FirstOrDefault(g => g!["status"]!.GetValue<string>() == "at_risk"), "the grant to be at risk");
+        billing.Clock.Advance(TimeSpan.FromDays(8));
+        Assert.Equal("revoked", (await Grants(user))[0]!["status"]!.GetValue<string>());
+
+        await ReturnCancelled(user, order);
+        await Settled(user);
+
+        Assert.Equal("revoked", (await Grants(user)).AsArray().First(g => g!["orderId"]!.GetValue<Guid>() == order)!["status"]!.GetValue<string>());
+        Assert.Equal(1, await GrantEvents(order, "active"));
+    }
+
+    [Fact]
+    public async Task A_grant_at_risk_because_of_a_refund_is_not_restored_and_neither_is_one_refunded_after_its_return()
+    {
+        var user = BillingFixture.NewUser();
+        var refunded = Guid.NewGuid();
+        var both = Guid.NewGuid();
+        await Confirmed(user, refunded, 80m);
+        await GrantOf(user, refunded);
+        await Confirmed(user, both, 80m);
+        await GrantOf(user, both);
+
+        await Refunded(user, refunded);
+        await Returned(user, both);
+        await Eventually(async () => (await Grants(user)).AsArray().Count(g => g!["status"]!.GetValue<string>() == "at_risk") == 2 ? (await Grants(user)) : null, "both grants to be at risk");
+        await Refunded(user, both);
+        await ReturnCancelled(user, refunded);
+        await ReturnCancelled(user, both);
+        await Settled(user);
+
+        var grants = (await Grants(user)).AsArray();
+        Assert.Equal("at_risk", grants.First(g => g!["orderId"]!.GetValue<Guid>() == refunded)!["status"]!.GetValue<string>());
+        Assert.Equal("at_risk", grants.First(g => g!["orderId"]!.GetValue<Guid>() == both)!["status"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task A_cancelled_return_for_an_unknown_order_or_a_grant_that_is_not_at_risk_changes_nothing_and_repeats_are_harmless()
+    {
+        var user = BillingFixture.NewUser();
+        var order = Guid.NewGuid();
+        await Confirmed(user, order, 80m);
+        await GrantOf(user, order);
+        var announcedBefore = await GrantEvents(order, "active");
+
+        await ReturnCancelled(user, Guid.NewGuid());
+        await ReturnCancelled(user, order);
+        await Settled(user);
+        Assert.Equal(announcedBefore, await GrantEvents(order, "active"));
+
+        // Returned, cancelled twice (the same message and a second one): restored once.
+        await Returned(user, order);
+        await Eventually(async () => (await Grants(user)).AsArray().FirstOrDefault(g => g!["status"]!.GetValue<string>() == "at_risk"), "the grant to be at risk");
+        var message = Guid.NewGuid();
+        await ReturnCancelled(user, order, message);
+        await ReturnCancelled(user, order, message);
+        await ReturnCancelled(user, order);
+        await Settled(user);
+
+        Assert.Equal("active", (await Grants(user)).AsArray().First(g => g!["orderId"]!.GetValue<Guid>() == order)!["status"]!.GetValue<string>());
+        Assert.Equal(announcedBefore + 1, await GrantEvents(order, "active"));
+    }
+
+    [Fact]
+    public async Task Restoring_a_grant_that_is_not_the_best_source_announces_no_entitlement_change()
+    {
+        var user = BillingFixture.NewUser();
+        await Json(Call(user, "POST", "/subscription", new { tier = "druid", paymentMethodToken = "tok" }), HttpStatusCode.Created);
+        var order = Guid.NewGuid();
+        await Confirmed(user, order, 80m);
+        await GrantOf(user, order);
+        await Returned(user, order);
+        await Eventually(async () => (await Grants(user)).AsArray().FirstOrDefault(g => g!["status"]!.GetValue<string>() == "at_risk"), "the grant to be at risk");
+
+        await ReturnCancelled(user, order);
+        await Eventually(async () => (await Grants(user)).AsArray().FirstOrDefault(g => g!["status"]!.GetValue<string>() == "active"), "the grant to be active again");
+        await Settled(user);
+
+        // The Druid subscription provides the tier all along, so the user heard about it once, when they subscribed.
+        var announced = await billing.WithDb(db => db.Outbox.Where(m => m.Type == "entitlement.changed.v1").ToListAsync());
+        Assert.Single(announced, m => m.Payload.Contains(user) && m.Payload.Contains("druid"));
+        Assert.DoesNotContain(announced, m => m.Payload.Contains(user) && m.Payload.Contains("grant_at_risk"));
     }
 }

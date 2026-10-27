@@ -156,7 +156,7 @@ docker compose --profile real up -d --build api
 
 ### The billing service
 
-`src/Greenhaus.Billing` implements `billing-api.yaml` on its own PostgreSQL: public plans, subscribe and cancel with a demo payment token (`...-declined` is refused, `...-renewal-fails` fails every renewal, `...-renewal-recovers` fails the first and works on a retry), renewals with **dunning** (a failed payment is retried daily, and a subscription still past due after seven days is cancelled and the tier falls back), invoices, and **purchase grants** from Orderflow events (`order.confirmed.v1` of $30, $80 or $150 earns 3 or 12 months of Gardener or 6 of Druid; a return or refund puts it at risk for 7 days, then it is revoked). It publishes `entitlement.changed.v1`, `grant.status_changed.v1` and `subscription.changed.v1`, which the Greenhaus API already consumes. `Billing:Period`, `Billing:Grace`, `Billing:RetryInterval` and `Billing:DunningPeriod` shorten time for demos. See [ADR 5](docs/adr/0005-billing-service.md).
+`src/Greenhaus.Billing` implements `billing-api.yaml` on its own PostgreSQL: public plans, subscribe and cancel with a demo payment token (`...-declined` is refused, `...-renewal-fails` fails every renewal, `...-renewal-recovers` fails the first and works on a retry), renewals with **dunning** (a failed payment is retried daily, and a subscription still past due after seven days is cancelled and the tier falls back), invoices, and **purchase grants** from Orderflow events (`order.confirmed.v1` of $30, $80 or $150 earns 3 or 12 months of Gardener or 6 of Druid; a return or refund puts it at risk for 7 days, then it is revoked; a cancelled return brings it back while the grace period runs). It publishes `entitlement.changed.v1`, `grant.status_changed.v1` and `subscription.changed.v1`, which the Greenhaus API already consumes. `Billing:Period`, `Billing:Grace`, `Billing:RetryInterval` and `Billing:DunningPeriod` shorten time for demos. See [ADR 5](docs/adr/0005-billing-service.md).
 
 ```powershell
 docker compose --profile real up --build billing   # http://localhost:8092/api/billing/v1, with RabbitMQ
@@ -195,7 +195,7 @@ Still to do:
 
 - **Hardware:** the controllers are emulated (`tools/KitEmulator`). A real ESP32 sketch for the same MQTT topics is not written. The web app still polls every ten seconds instead of receiving live updates.
 - **Docs-Brain:** the assistant tab in the app is built against the mock (streamed answer, sources, quota, what the plan lets it see). The real service endpoint and the Docs-Brain integration are next.
-- **Billing:** a returned order cannot be un-returned (the contract has no event for it).
+- **Billing:** `order.return_cancelled.v1` is consumed; Orderflow is building the publisher, so the end-to-end story does not include a cancelled return yet.
 - **Orderflow:** nothing open on the Greenhaus side.
 - **Later:** achievements (last, by decision), encrypting the packing secrets at rest, an ESP32 sketch for the MQTT topics.
 ## Licence

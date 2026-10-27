@@ -54,6 +54,9 @@ namespace Greenhaus.Billing.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AtRiskReason")
+                        .HasColumnType("text");
+
                     b.Property<DateTimeOffset?>("GraceEndsAt")
                         .HasColumnType("timestamp with time zone");
 

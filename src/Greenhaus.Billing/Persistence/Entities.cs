@@ -46,6 +46,12 @@ public class GrantEntity
     public DateTimeOffset ValidFrom { get; set; }
     public DateTimeOffset ValidUntil { get; set; }
     public DateTimeOffset? GraceEndsAt { get; set; }
+    /// <summary>
+    /// Why the grant is at risk: "returned" (the goods were sent back, which a cancelled return can undo) or "refunded" (the money went
+    /// back, which nothing undoes). Null when the grant is not at risk. A grant that was at risk before this column existed has none and
+    /// is never restored.
+    /// </summary>
+    public string? AtRiskReason { get; set; }
 }
 
 /// <summary>The entitlement last announced for a user, so a change is announced once and with the right previous tier.</summary>
