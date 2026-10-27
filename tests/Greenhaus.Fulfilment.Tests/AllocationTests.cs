@@ -69,8 +69,8 @@ public class AllocationTests(FulfilmentFixture f)
         Assert.True(heater["thermalCutoff"]!.GetValue<bool>());
 
         // Only hashes travel. The token and the broker password are not in the event, in any form.
-        var token = row.ClaimToken!;
-        var credential = row.Credential!;
+        var token = f.Token(row);
+        var credential = f.Credential(row);
         Assert.DoesNotContain(token, heard.Body);
         Assert.DoesNotContain(credential, heard.Body);
         Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))).ToLowerInvariant(), payload["claimTokenHash"]!.GetValue<string>());
@@ -119,10 +119,10 @@ public class AllocationTests(FulfilmentFixture f)
         var stored = rows.Single(r => r.Sku == PotKit);
 
         Assert.Equal("allocated", pot["state"]!.GetValue<string>());
-        Assert.Equal(stored.ClaimToken, pot["claimToken"]!.GetValue<string>());
-        Assert.Equal(stored.Credential, pot["credential"]!.GetValue<string>());
+        Assert.Equal(f.Token(stored), pot["claimToken"]!.GetValue<string>());
+        Assert.Equal(f.Credential(stored), pot["credential"]!.GetValue<string>());
         // The link is what a QR would hold: the claim page of the web app with the device and the token.
-        Assert.Equal($"http://localhost:5174/claim?d={stored.DeviceId}&t={Uri.EscapeDataString(stored.ClaimToken!)}", pot["claimUrl"]!.GetValue<string>());
+        Assert.Equal($"http://localhost:5174/claim?d={stored.DeviceId}&t={Uri.EscapeDataString(f.Token(stored))}", pot["claimUrl"]!.GetValue<string>());
 
         // Once the device is shipped and Pulse has it, nothing secret is left to show.
         f.Pulse.Register(stored.DeviceId);

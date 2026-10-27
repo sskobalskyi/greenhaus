@@ -125,6 +125,7 @@ public static class EventHandlers
         var events = services.GetRequiredService<EventPublisher>();
         var clock = services.GetRequiredService<TimeProvider>();
         var options = services.GetRequiredService<IOptions<FulfilmentOptions>>().Value;
+        var secrets = services.GetRequiredService<SecretBox>();
 
         var orderId = p.GetProperty("orderId").GetGuid();
         var customerId = p.GetProperty("customerId").GetString()!;
@@ -148,10 +149,13 @@ public static class EventHandlers
                 var deviceId = Allocator.NewDeviceId();
                 var token = Allocator.NewSecret();
                 var credential = Allocator.NewSecret();
+                var id = Guid.NewGuid();
                 var allocation = new AllocationEntity
                 {
-                    Id = Guid.NewGuid(), OrderId = orderId, CustomerId = customerId, Sku = sku, Index = index, DeviceId = deviceId, Model = kit.Model,
-                    State = AllocationState.Allocated, AllocatedAt = now, ClaimToken = token, Credential = credential,
+                    Id = id, OrderId = orderId, CustomerId = customerId, Sku = sku, Index = index, DeviceId = deviceId, Model = kit.Model,
+                    // Sealed for the database: the plaintext exists in memory here and in the packing bundle, nowhere else.
+                    State = AllocationState.Allocated, AllocatedAt = now, ClaimToken = secrets.Seal(token, SecretBox.ClaimTokenField, id, deviceId),
+                    Credential = secrets.Seal(credential, SecretBox.CredentialField, id, deviceId),
                     ClaimTokenHash = Allocator.ClaimTokenHash(token), ClaimTokenExpiresAt = now.AddDays(options.TokenLifetimeDays),
                     CredentialHash = Allocator.CredentialHash(credential), Capabilities = kit.Capabilities.ToJsonString(),
                 };

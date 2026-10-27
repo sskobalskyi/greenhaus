@@ -204,6 +204,10 @@ public class AssistantUsageEntity
     /// <summary>The first day of the month.</summary>
     public DateOnly Month { get; set; }
     public int Count { get; set; }
+    /// <summary>Places held by questions that are still running. They are not counted questions, and a place is given back when its question ends.</summary>
+    public int Reserved { get; set; }
+    /// <summary>When a place was last taken. Places older than the reservation lifetime belong to a process that died and are dropped.</summary>
+    public DateTimeOffset? ReservedAt { get; set; }
 }
 
 /// <summary>Something that happened that a person should know. Only a kind and its facts are stored, clients write the text.</summary>

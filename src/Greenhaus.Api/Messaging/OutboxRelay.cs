@@ -64,16 +64,17 @@ public sealed class OutboxRelay(IServiceScopeFactory scopes, IOptions<RabbitOpti
             activity?.SetTag("messaging.rabbitmq.destination.routing_key", message.Type);
             activity?.SetTag("messaging.message.id", message.Id.ToString());
 
+            var headers = new Dictionary<string, object?>
+            {
+                ["messageId"] = message.Id.ToString(),
+                ["occurredAt"] = message.CreatedAt.ToString("O"),
+                ["schemaVersion"] = "1",
+            };
+            // An event with no trace context has no traceparent header. A null header would be a header that is there and says nothing.
+            if ((activity?.Id ?? message.Traceparent) is { } traceparent) headers["traceparent"] = traceparent;
             var properties = new BasicProperties
             {
-                MessageId = message.Id.ToString(), Type = message.Type, ContentType = "application/json", Persistent = true,
-                Headers = new Dictionary<string, object?>
-                {
-                    ["messageId"] = message.Id.ToString(),
-                    ["occurredAt"] = message.CreatedAt.ToString("O"),
-                    ["schemaVersion"] = "1",
-                    ["traceparent"] = activity?.Id ?? message.Traceparent,
-                },
+                MessageId = message.Id.ToString(), Type = message.Type, ContentType = "application/json", Persistent = true, Headers = headers,
             };
             try
             {

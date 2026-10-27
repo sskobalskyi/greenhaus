@@ -140,6 +140,9 @@ services:
         condition: service_healthy
     environment:
       ConnectionStrings__Fulfilment: Host=fulfilment-db;Database=fulfilment;Username=fulfilment;Password=fulfilment
+      # Seals the claim tokens and device passwords in the database. This default is a development value that is published in this
+      # file: set FULFILMENT_SECRETS_KEY (base64 of 32 random bytes) for anything that is not a local run.
+      Fulfilment__SecretsKey: ${FULFILMENT_SECRETS_KEY:-Z3JlZW5oYXVzLWRldi1mdWxmaWxtZW50LXNlY3JldCE=}
       Auth__Mode: Development
       RabbitMq__Host: rabbitmq
       RabbitMq__User: guest

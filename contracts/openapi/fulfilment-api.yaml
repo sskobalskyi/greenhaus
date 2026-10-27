@@ -44,6 +44,7 @@ paths:
                 items: { $ref: '#/components/schemas/Allocation' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/SecretsUnreadable' }
   /orders/{orderId}/allocations/retry:
     parameters:
       - $ref: '#/components/parameters/OrderId'
@@ -64,6 +65,7 @@ paths:
                 items: { $ref: '#/components/schemas/Allocation' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/SecretsUnreadable' }
 components:
   securitySchemes:
     bearerAuth:
@@ -80,6 +82,11 @@ components:
   responses:
     Forbidden:
       description: The caller is not fulfilment staff (code `forbidden`)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    SecretsUnreadable:
+      description: The packing secrets of a device cannot be opened, because the key is wrong or a stored value was changed (code `secrets_unreadable`). The secret is never sent in this case.
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }

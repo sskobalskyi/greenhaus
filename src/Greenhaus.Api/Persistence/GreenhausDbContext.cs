@@ -135,6 +135,7 @@ public class GreenhausDbContext(DbContextOptions<GreenhausDbContext> options) : 
             e.ToTable("assistant_usage");
             e.HasKey(x => new { x.UserId, x.Month });
             e.Property(x => x.UserId).HasMaxLength(64);
+            e.Property(x => x.Reserved).HasDefaultValue(0);
         });
 
         model.Entity<InboxMessageEntity>(e =>
