@@ -31,6 +31,8 @@ jobs:
         run: |
           jq -e '.species | length >= 30' data/species.json
           jq -e '[.species[].id] | (length == (unique | length))' data/species.json
+          # Every species has Ukrainian names for its care text.
+          jq -e --slurpfile s data/species.json '[$s[0].species[].id] - (.species | keys) == []' data/care-texts-uk.json
 
       - name: Check the shop catalog
         run: |

@@ -54,6 +54,39 @@ foreach ($s in $species) {
     $code = curl.exe -s -o NUL -w '%{http_code}' -X PUT -H "Authorization: Bearer $token" -F "file=@$file;type=text/markdown" $url
     if ($code -ne '201') { Write-Host "  FAIL $title -> $code" -ForegroundColor Red; $failed++ }
 }
+# The embeddings of Docs-Brain do not work across languages (a Ukrainian question does not find an English text), so every
+# species also gets a Ukrainian text of its own, under its own title. The words and templates are data (data/care-texts-uk.json),
+# which keeps non-ASCII text out of this script.
+$uk = Get-Content "$greenhaus\data\care-texts-uk.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+function Fill([string]$template, [hashtable]$values) {
+    foreach ($key in $values.Keys) { $template = $template.Replace("{$key}", [string]$values[$key]) }
+    $template
+}
+function Range-Values($r) { @{ min = $r.min; max = $r.max } }
+foreach ($s in $species) {
+    $n = $uk.species.($s.id)
+    if (-not $n) { Write-Host "  FAIL no Ukrainian names for $($s.id)" -ForegroundColor Red; $failed++; continue }
+    $base = @{ name = $n.name; acc = $n.acc; plural = $n.plural; latin = $s.scientificName; category = $uk.categories.($s.category) }
+    $t = $uk.templates; $p = $s.preferred
+    $sections = @((Fill $t.title $base), (Fill $t.intro $base))
+    if ($p.soil_moisture) { $sections += Fill $t.water ($base + (Range-Values $p.soil_moisture)) }
+    if ($p.light) { $sections += Fill $t.light ($base + (Range-Values $p.light)) }
+    $climate = @()
+    if ($p.temperature) { $climate += Fill $t.climateTemperature (Range-Values $p.temperature) }
+    if ($p.air_humidity) { $climate += Fill $t.climateHumidity (Range-Values $p.air_humidity) }
+    if ($climate.Count) { $sections += Fill $t.climate ($base + @{ climate = ($climate -join ', ') }) }
+    if ($p.airflow) { $sections += Fill $t.airflow ($base + (Range-Values $p.airflow)) }
+    if ($p.ph) { $sections += Fill $t.ph ($base + (Range-Values $p.ph)) }
+    if ($s.fertilizerIntervalDays) { $sections += Fill $t.fertilizer ($base + @{ days = $s.fertilizerIntervalDays }) }
+    # Docs-Brain allows letters, digits, space and . _ - ( ) in a title, so an apostrophe (м'ята) is left out of it, not of the text.
+    $title = (Fill $t.title $base).Replace("'", '')
+    $file = Join-Path $work "$($s.id).uk.md"
+    [IO.File]::WriteAllText($file, (($sections -join "`n`n") + "`n"), (New-Object System.Text.UTF8Encoding($false)))
+    $url = "$DocsBrain/api/shared/documents/$([Uri]::EscapeDataString($title))"
+    $code = curl.exe -s -o NUL -w '%{http_code}' -X PUT -H "Authorization: Bearer $token" -F "file=@$file;type=text/markdown" $url
+    if ($code -ne '201') { Write-Host "  FAIL $($s.id) (uk) -> $code" -ForegroundColor Red; $failed++ }
+}
+
 Remove-Item -Recurse -Force $work
 if ($failed) { throw "$failed care text(s) were not stored" }
-Write-Host "stored $($species.Count) care texts in the shared corpus"
+Write-Host "stored $($species.Count) English and $($species.Count) Ukrainian care texts in the shared corpus"
